@@ -4,12 +4,6 @@
 \***********************************************************************************************/
 #include "include/utils.h"
 
-// print a usage message and exit with code 1(FAILURE)
-void usage_error(){
-    fprintf(stdout, "Usage: client\n");
-    exit(EXIT_FAILURE);
-}
-
 // print error indicated by errno and exit with code 1(FAILURE)
 void perror_exit(char* message){
     perror(message);
@@ -54,6 +48,6 @@ int bindOnPort(int fd, uint16_t portNumber){
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(portNumber);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
     return bind(fd, (struct sockaddr*)&addr, sizeof(addr));
 }

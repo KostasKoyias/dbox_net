@@ -8,9 +8,7 @@
 #define CLIENT_DELETE 1
 
 /*server operations*/
-int clientlistOperation(uint8_t, int, struct G_list*);
-int insertClient(int, struct G_list*);
+int clientlistUpdate(uint8_t, int, struct G_list*);
 int sendClients(int, struct G_list*);
-int deleteClient(int, struct G_list*);
 
 #endif

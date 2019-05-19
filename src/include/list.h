@@ -37,7 +37,4 @@
     int listPrint(const struct G_list*);
     int listDelete(struct G_list*, const void*);
     int listFree(struct G_list*);
-    double listSum(const struct G_list*);
-    int listMap(struct G_list*, int (*)(void *));
-
 #endif

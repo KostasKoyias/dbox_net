@@ -3,7 +3,7 @@
 
 #include <stdio.h>      
 #include <stdlib.h>
-//#include <string.h>
+#include <string.h>
 #include <signal.h>
 //#include <fcntl.h>     //low-level I/O syscalls
 #include <stdarg.h>      //variable argument lists 
@@ -13,6 +13,8 @@
 #include <sys/socket.h>  //socket
 //#include <sys/stat.h>
 #include <netinet/in.h>  //sockaddr_in 
+#include <arpa/inet.h>   //inet_aton
+#include <netdb.h>       //gethost*
 #include <sys/types.h>
 //#include <dirent.h>
 //#include <sys/wait.h>

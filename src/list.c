@@ -102,26 +102,3 @@ int listFree(struct G_list* list){
     }
     return 0;
 }
-
-/* add up all elements in a list and return the sum */
-double listSum(const struct G_list* list){
-    struct G_node *parser;
-    double sum = 0;
-
-    // check whether there is a definition about the value of this kind of data
-    if(list->value == NULL)
-        return sum;
-
-    // for each element add up it's value in the list
-    for(parser = list->head; parser != NULL; parser = parser->next)
-        sum += list->value(parser->data);
-    return sum;
-}
-
-// apply a function to each element of a list
-int listMap(struct G_list* list, int (*function)(void*)){
-    struct G_node *parser;
-    for(parser = list->head; parser != NULL; parser = parser->next)
-        function(parser->data);
-    return 0;
-}

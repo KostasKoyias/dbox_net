@@ -3,13 +3,16 @@ CFLAGS = -g3 -Wall
 HDRS = define.h utils.h 
 OBJS = utils.o clientInfo.o list.o dbserverOperations.o
 LFLAGS = -lpthread -lrt
-SOURCES = dbserver.c utils.c clientInfo.c list.c dbserverOperations.c
+SOURCES = utils.c clientInfo.c list.c dbserverOperations.c
 
-all: dbserver $(OBJS)  
+all: dbserver dbclient $(OBJS)  
 
 # applications
 dbserver: dbserver.c $(OBJS)
-	$(CC) $(CFLAGS) -o dbserver $(SOURCES) $(LFLAGS)
+	$(CC) $(CFLAGS) -o dbserver dbserver.c $(SOURCES) $(LFLAGS)
+
+dbclient: dbclient.c $(OBJS)
+	$(CC) $(CFLAGS) -o dbclient dbclient.c $(SOURCES) $(LFLAGS)
 
 # data structures and utilities	
 utils.o: utils.c 
@@ -25,5 +28,5 @@ dbserverOperations.o: dbserverOperations.c
 	$(CC) $(CFLAGS) -c dbserverOperations.c $(LFLAGS)
 
 clean: 
-	rm -rf $(OBJS) dbserver 
+	rm -rf $(OBJS) dbserver dbclient
  
