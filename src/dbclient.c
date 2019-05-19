@@ -3,6 +3,7 @@
 #include "include/clientInfo.h"
 #include "include/list.h"
 #include "include/utils.h"
+#include "include/dbclientOperations.h"
 #define ARGC 13
 #define HOST_SIZE 256
 
@@ -13,9 +14,8 @@ void handler(int);
 int main(int argc, char* argv[]){
     int i, dirName, workerThreads = 0, bufferSize = 0, sock;
     struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET};
-    char requestCode[CODE_LEN], hostName[256];
-    struct hostent* clientHost;
-    struct in_addr* clientAddress;
+    char hostName[HOST_SIZE];
+    struct hostent* clientAddress;
 
     signal(SIGINT, handler); // in case of a ^C signal
 
@@ -55,35 +55,37 @@ int main(int argc, char* argv[]){
     //if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
       //  error_exit("dbclient: integer arguments should all be positive\n");
 
-    // create socket
-    if((sock = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: socket creation failed!");
-    
-    // connect to server
-    fprintf(stdout, "dbclient: connecting to port %hu(n)\n", server.sin_port);
-    if(connect(sock, (struct sockaddr*)&server, sizeof(server)) == -1)
-        perror_exit("dbclient: connect to server");
-    
-    // inform server for your arrival issuing a LOG_ON request
-    strcpy(requestCode, "LOG_ON");
-    if(write(sock, requestCode, CODE_LEN) != CODE_LEN)
-        perror_exit("dbclient: failed to forward request code");
-
     // get hostname of this machine
     if(gethostname(hostName, HOST_SIZE) == -1)
         perror_exit("dbclient: getting hostname of client");
     
     // get IP address of this machine
-    if((clientHost = gethostbyname(hostName)) == NULL)
+    if((clientAddress = gethostbyname(hostName)) == NULL)
         perror_exit("dbclient: getting IP address of client");
+    client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
 
-    // convert IP address to binary
-    client.sin_addr = (*(struct in_addr*)clientHost->h_addr_list[0]);
-    printf("dbclient: my IP address %u %u\n", client.sin_addr.s_addr, ((struct in_addr*)clientHost->h_addr_list[0])->s_addr);
+    // create socket
+    if((sock = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        perror_exit("dbclient: socket creation failed!");
+    
+    // connect to server
+    if(connect(sock, (struct sockaddr*)&server, sizeof(server)) == -1)
+        perror_exit("dbclient: connect to server");
+    
+    // inform server for your arrival issuing a LOG_ON request
+    if(informServer(LOG_ON, sock, &client) < 0)
+        perror_exit("dbclient: failed inform server on arrival");
 
-    // send (IP address, port) pair to server
-    if(write(sock, &client.sin_addr.s_addr, sizeof(uint32_t)) < 0 || write(sock, &client.sin_port, sizeof(uint16_t)) < 0)
-        perror_exit("dbclient: failed to send (IP address, port) pair to dbox server\n");
+    // ask for the client list
+    if(getClients(sock, &clientlist) < 0)
+        perror_exit("dbclient: failed to get dbox client list from server");
+    listPrint(&clientlist);
+
+    // let server know that you are about to exit dbox system issuing a LOG_OFF request
+    getchar();
+    if(informServer(LOG_OFF, sock, &client) < 0)
+        perror_exit("dbclient: failed to inform server before exiting");
+    
     return 0; 
 }
 

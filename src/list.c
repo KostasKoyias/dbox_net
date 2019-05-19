@@ -17,7 +17,7 @@ void* listSearch(const struct G_list* list, const void *data){
 /* insert an item in the list, initialize it's value using function 'init', which was passed as a parameter*/
 int listInsert(struct G_list* list, const void *data){
     struct G_node* node;
-    if(list->assign == NULL || list == NULL || data == NULL)
+    if(list->assign == NULL || list == NULL || data == NULL || listSearch(list, data) != NULL)
         return -1;
     if((node = malloc(sizeof(struct G_node))) == NULL){
         perror("listInsert - malloc");
@@ -80,7 +80,7 @@ int listPrint(const struct G_list *list){
     struct G_node* parser;
     if(list == NULL || list->head == NULL || list->print == NULL)
         return -1;
-    fprintf(stdout, "\nlist of length %d and node size %d\n-------------------------------------\n", list->length, (int)list->type_size);
+    fprintf(stdout, "\n\e[1m\e[4mClient list\e[0m\n");
     for(parser = list->head; parser != NULL; parser = parser->next)
         list->print(parser->data);
     return 0;

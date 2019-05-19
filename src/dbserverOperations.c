@@ -17,9 +17,9 @@ int clientlistUpdate(uint8_t operationCode, int socket, struct G_list* list){
 
     // if a client logged in, add client to the client list
     if(operationCode == CLIENT_INSERT)
-        return listInsert(list, (void*)&info);
+        return listInsert(list, &info);
     // else remove client from the client list
     else if(operationCode == CLIENT_DELETE)
-        return listDelete(list, (void*)&info);
+        return listDelete(list, &info);
     else return -2;
 }

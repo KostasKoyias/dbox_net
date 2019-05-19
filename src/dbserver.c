@@ -57,7 +57,7 @@ int main(int argc, char* argv[]){
         else if(strcmp(requestCode, "GET_CLIENTS") == 0)
             sendClients(listeningSocket, &clientlist);
         // else if a client just logged out, remove the client from our client list
-        else if(strcmp(requestCode, "LOG_OF"))
+        else if(strcmp(requestCode, "LOG_OFF"))
             clientlistUpdate(CLIENT_DELETE, responseSocket, &clientlist);
         else 
             fprintf(stderr, "dbserver: got invalid request code %s\n", requestCode);
