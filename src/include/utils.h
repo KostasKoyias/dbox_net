@@ -8,5 +8,6 @@ void perror_exit(char*);
 void error_exit(const char*,...);
 int error_return(int, const char*, ...);
 int exclusive_print(int, const char*, ...);
+int bindOnPort(int, uint16_t);
 
 #endif

@@ -4,19 +4,24 @@
 #include <stdio.h>      
 #include <stdlib.h>
 //#include <string.h>
-//#include <signal.h>
-//#include <fcntl.h>      //low-level I/O syscalls
-#include <stdarg.h>       //variable argument lists 
+#include <signal.h>
+//#include <fcntl.h>     //low-level I/O syscalls
+#include <stdarg.h>      //variable argument lists 
 #include <stdint.h>
 #include <sys/file.h>    //flock
 #include <unistd.h>      //fsync
+#include <sys/socket.h>  //socket
 //#include <sys/stat.h>
-//#include <sys/types.h>
+#include <netinet/in.h>  //sockaddr_in 
+#include <sys/types.h>
 //#include <dirent.h>
 //#include <sys/wait.h>
 //#include <time.h>
 //#include <semaphore.h>
 //#include <errno.h>
+
+#define CODE_LEN 15
+#define BACK_LOG 5
 //#define MIN(a,b) ((a) < (b)) ? (a) : (b)
 //#define FILE_PERMS 0644
 //#define DIR_PERMS 0744  

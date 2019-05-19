@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -g3 -Wall
 HDRS = define.h utils.h 
-OBJS = utils.o clientInfo.o list.o
+OBJS = utils.o clientInfo.o list.o dbserverOperations.o
 LFLAGS = -lpthread -lrt
-SOURCES = dbserver.c utils.c clientInfo.c list.c
+SOURCES = dbserver.c utils.c clientInfo.c list.c dbserverOperations.c
 
 all: dbserver $(OBJS)  
 
@@ -20,6 +20,9 @@ list.o: list.c
 
 clientInfo.o: clientInfo.c 
 	$(CC) $(CFLAGS) -c clientInfo.c $(LFLAGS)
+
+dbserverOperations.o: dbserverOperations.c
+	$(CC) $(CFLAGS) -c dbserverOperations.c $(LFLAGS)
 
 clean: 
 	rm -rf $(OBJS) dbserver 

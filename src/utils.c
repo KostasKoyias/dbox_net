@@ -6,8 +6,7 @@
 
 // print a usage message and exit with code 1(FAILURE)
 void usage_error(){
-    fprintf(stdout, "Usage: mirror -n id -c common_dir -i input_dir -m mirror_dir -b buffer_size -l"\
-    " log_file\ninput_dir shall exist, but mirror_dir should not\nAll six arguments are mandatory\n");
+    fprintf(stdout, "Usage: client\n");
     exit(EXIT_FAILURE);
 }
 
@@ -49,4 +48,12 @@ int exclusive_print(int fd, const char* format, ...){
     flock(fd, LOCK_UN);
     va_end(args);
     return 0;
+}
+
+int bindOnPort(int fd, uint16_t portNumber){
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(portNumber);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    return bind(fd, (struct sockaddr*)&addr, sizeof(addr));
 }
