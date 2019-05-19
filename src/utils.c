@@ -44,6 +44,7 @@ int exclusive_print(int fd, const char* format, ...){
     return 0;
 }
 
+// bind a socket to an address, accepting connections from anywhere
 int bindOnPort(int fd, uint16_t portNumber){
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;

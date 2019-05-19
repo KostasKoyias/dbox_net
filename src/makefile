@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g3 -Wall
+CFLAGS = -g3 #-Wall
 HDRS = define.h utils.h 
 OBJS = utils.o clientInfo.o list.o dbserverOperations.o
 LFLAGS = -lpthread -lrt
