@@ -12,7 +12,7 @@ struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, c
 void handler(int);
 
 int main(int argc, char* argv[]){
-    int i, dirName, workerThreads = 0, bufferSize = 0, sock;
+    int i, dirName, workerThreads = 0, bufferSize = 0, serverSocket;
     struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET};
     char hostName[HOST_SIZE];
     struct hostent* clientAddress;
@@ -65,27 +65,46 @@ int main(int argc, char* argv[]){
     client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
 
     // create socket
-    if((sock = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
         perror_exit("dbclient: socket creation failed!");
     
     // connect to server
-    if(connect(sock, (struct sockaddr*)&server, sizeof(server)) == -1)
+    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
         perror_exit("dbclient: connect to server");
     
     // inform server for your arrival issuing a LOG_ON request
-    if(informServer(LOG_ON, sock, &client) < 0)
+    if(informServer(LOG_ON, serverSocket, &client) < 0)
         perror_exit("dbclient: failed inform server on arrival");
 
+    /*****************************************************************Re Connect to server****************************************************************/
+    // create socket
+    close(serverSocket);
+    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        perror_exit("dbclient: socket creation2 failed!");
+    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
+      perror_exit("dbclient: connect to server2");
+    /*****************************************************************************************************************************************************/
+
     // ask for the client list
-    if(getClients(sock, &clientlist) < 0)
+    if(getClients(serverSocket, &clientlist) < 0)
         perror_exit("dbclient: failed to get dbox client list from server");
     listPrint(&clientlist);
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
-    if(informServer(LOG_OFF, sock, &client) < 0)
+    /*****************************************************************Re Connect to server****************************************************************/
+    // create socket
+    close(serverSocket);
+    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        perror_exit("dbclient: socket creation3 failed!");
+    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
+      perror_exit("dbclient: connect to server3");
+    /*****************************************************************************************************************************************************/
+    if(informServer(LOG_OFF, serverSocket, &client) < 0)
         perror_exit("dbclient: failed to inform server before exiting");
     
+    close(serverSocket);
+    listFree(&clientlist);
     return 0; 
 }
 

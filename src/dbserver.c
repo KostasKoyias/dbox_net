@@ -13,6 +13,8 @@ int main(int argc, char* argv[]){
     char requestCode[CODE_LEN];
     struct sockaddr_in clientAddress;
     socklen_t clientlen = 0;
+
+    // declare handler in case of an interrupt signal received
     signal(SIGINT, handler);
 
     // ensure usage is correct
@@ -42,25 +44,29 @@ int main(int argc, char* argv[]){
             perror_exit("dbserver: accepting connection failed");
 
         // get code of request
-        if(read(responseSocket, requestCode, CODE_LEN) == -1){
+        if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
             perror("dbserver: failed to get request from client");
             continue;
         }
 
         // ensure request string is terminated
         requestCode[CODE_LEN-1] = '\0';
+        fprintf(stdout, "request %s from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, ntohs(clientAddress.sin_port));
+    
+        // if a client requested to log in, add client to the client list
+        if(strcmp(requestCode, "LOG_ON") == 0 && clientsUpdate(CLIENT_INSERT, responseSocket, &clientlist) < 0)
+            fprintf(stderr, "dbserver: failed to add new client\n");
 
-        // if a client requested to log in
-        if(strcmp(requestCode, "LOG_ON") == 0)
-            clientlistUpdate(CLIENT_INSERT, responseSocket, &clientlist);
-        // else if a client asks for the client list, send it right away based on the protocol 
-        else if(strcmp(requestCode, "GET_CLIENTS") == 0)
-            sendClients(listeningSocket, &clientlist);
+        // else if a client just asked for the client list, send it right away based on the protocol 
+        else if(strcmp(requestCode, "GET_CLIENTS") == 0 && sendClients(responseSocket, &clientlist) < 0)
+            fprintf(stderr, "dbserver: failed to send client list to a new client\n");
+
         // else if a client just logged out, remove the client from our client list
-        else if(strcmp(requestCode, "LOG_OFF"))
-            clientlistUpdate(CLIENT_DELETE, responseSocket, &clientlist);
-        else 
-            fprintf(stderr, "dbserver: got invalid request code %s\n", requestCode);
+        else if(strcmp(requestCode, "LOG_OFF") == 0 && clientsUpdate(CLIENT_DELETE, responseSocket, &clientlist) < 0)
+            fprintf(stderr, "dbserver: failed to satisfy LOG_OFF request\n");
+    
+        // close response socket, not to run out of file descriptors
+        close(responseSocket);
         listPrint(&clientlist);
 
     }
