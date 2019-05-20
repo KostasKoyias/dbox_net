@@ -11,11 +11,13 @@
 #include <sys/file.h>    //flock
 #include <unistd.h>      //fsync
 #include <sys/socket.h>  //socket
-//#include <sys/stat.h>
+#include <sys/stat.h>    //stat
 #include <netinet/in.h>  //sockaddr_in 
 #include <arpa/inet.h>   //inet_aton
 #include <netdb.h>       //gethost*
+#include <time.h>        //timespec,time_t
 #include <sys/types.h>
+#include <pthread.h>     //threads, mutexes
 //#include <dirent.h>
 //#include <sys/wait.h>
 //#include <time.h>
@@ -24,8 +26,9 @@
 #define PATH_SIZE 128
 #define CODE_LEN 15
 #define BACK_LOG 5
-//#define MIN(a,b) ((a) < (b)) ? (a) : (b)
-//#define FILE_PERMS 0644
+#define SOCKET_CAPACITY 1024
+#define MIN(a,b) ((a) < (b)) ? (a) : (b)
+#define FILE_PERMS 0644
 //#define DIR_PERMS 0744  
 //#define MAX_BUFFER 2048      // buffers of this size, usually store absolute paths, so they need to be big
 //#define MAX_ID 8             // ids have no more than 7 digits

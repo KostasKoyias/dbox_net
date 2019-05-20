@@ -97,6 +97,11 @@ int main(int argc, char* argv[]){
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
+    // initialize mutexes
+    pthread_mutex_init(&(rsrc.bufferMutex), NULL);
+    pthread_mutex_init(&(rsrc.listMutex), NULL);
+
+
     // create worker threads
 
 
@@ -107,12 +112,18 @@ int main(int argc, char* argv[]){
         perror_exit("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
-    /*while(1){
+    while(1){
         fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", client.sin_port, htons(client.sin_port));
 
         // accept TCP connection
         if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1)
             perror_exit("dbserver: accepting connection failed");
+
+        // if peer is neither the server nor a client from the list, close connection immediately
+        if((server.sin_addr.s_addr != otherClient.sin_addr.s_addr || server.sin_port != otherClient.sin_port) && confirmClient(&otherClient, &rsrc) != 1){
+            close(generalSocket);
+            continue;
+        }
 
         //**************************************    DEPRECATED   *******************************************************
         printf("Accepted connection from: %d\t%d\n", htonl(otherClient.sin_addr.s_addr), htons(otherClient.sin_port));
@@ -132,7 +143,7 @@ int main(int argc, char* argv[]){
     
         // close response socket, not to run out of file descriptors
         close(generalSocket);
-    }*/
+    }
     
 
 
