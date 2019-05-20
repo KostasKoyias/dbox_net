@@ -43,6 +43,11 @@ int main(int argc, char* argv[]){
         if((responseSocket = accept(listeningSocket, (struct sockaddr*)&clientAddress, &clientlen)) == -1)
             perror_exit("dbserver: accepting connection failed");
 
+        /**********************************************/
+        printf("Accepted connection from: %d\t%d\n", htonl(clientAddress.sin_addr.s_addr), htons(clientAddress.sin_port));
+        /*********************************************/
+
+
         // get code of request
         if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
             perror("dbserver: failed to get request from client");
@@ -51,7 +56,7 @@ int main(int argc, char* argv[]){
 
         // ensure request string is terminated
         requestCode[CODE_LEN-1] = '\0';
-        fprintf(stdout, "request %s from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, ntohs(clientAddress.sin_port));
+        fprintf(stdout, "request %s from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, clientAddress.sin_port);
     
         // if a client requested to log in, add client to the client list
         if(strcmp(requestCode, "LOG_ON") == 0 && clientsUpdate(CLIENT_INSERT, responseSocket, &clientlist) < 0)

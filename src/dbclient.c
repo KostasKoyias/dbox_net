@@ -13,42 +13,13 @@ struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, c
 void handler(int);
 
 int main(int argc, char* argv[]){
-    int i, dirName, workerThreads = 0, bufferSize = 0, serverSocket;
+    int i, dirName, workerThreads = 0, bufferSize = 0, serverSocket, listeningSocket;
     struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET};
     char hostName[HOST_SIZE];
     struct hostent* clientAddress;
     struct circularBuffer buffer;
 
     signal(SIGINT, handler); // in case of a ^C signal
-
-/*********************************************************
-    struct fileInfo file = {.version = 2, .path = "\0"};
-    struct clientInfo cl;
-    bufferInit(2, &buffer);
-    bufferRemove(&file, &buffer);
-    for(i = 0; i < 3; i++){
-        cl.ipAddress = i;
-        cl.portNumber = i*i;
-        clientAssign(&file.owner, &cl);
-        bufferAdd(&file, &buffer);
-        printf("%d:\n", i);
-        bufferPrint(&buffer);
-    }
-    printf("Finally\n");
-    bufferPrint(&buffer);
-
-    printf("Removing\n");
-    for(i = 0; i < 2; i++)
-        bufferRemove(&file, &buffer);
-    bufferPrint(&buffer);
-    bufferFree(&buffer);
-    return 0;
-********************************************************/
-
-
-
-
-
 
     // handle command line arguments, ensure they are all in the appropriate range
     //if(argc != ARGC)
@@ -94,11 +65,10 @@ int main(int argc, char* argv[]){
     if((clientAddress = gethostbyname(hostName)) == NULL)
         perror_exit("dbclient: getting IP address of client");
     client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
-    client.sin_addr.s_addr = htonl(client.sin_addr.s_addr);
 
     // create socket
     if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: socket creation failed!");
+        perror_exit("dbclient: server socket creation failed!");
     
     // connect to server
     if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
@@ -107,6 +77,8 @@ int main(int argc, char* argv[]){
     // inform server for your arrival issuing a LOG_ON request
     if(informServer(LOG_ON, serverSocket, &client) < 0)
         perror_exit("dbclient: failed inform server on arrival");
+
+
 
     /*****************************************************************Re Connect to server****************************************************************/
     // create socket
@@ -117,11 +89,23 @@ int main(int argc, char* argv[]){
       perror_exit("dbclient: connect to server2");
     /*****************************************************************************************************************************************************/
 
+
+
     // ask for the client list
     if(getClients(serverSocket, &client, &buffer, &clientlist) < 0)
         perror_exit("dbclient: failed to get dbox client list from server");
     bufferPrint(&buffer);
     listPrint(&clientlist);
+
+    // create worker threads
+
+
+    // create a listening socket 
+    if((listeningSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        perror_exit("dbclient: listening socket creation failed!");
+
+    
+
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
@@ -133,6 +117,9 @@ int main(int argc, char* argv[]){
     if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
       perror_exit("dbclient: connect to server3");
     /*****************************************************************************************************************************************************/
+ 
+ 
+ 
     if(informServer(LOG_OFF, serverSocket, &client) < 0)
         perror_exit("dbclient: failed to inform server before exiting");
     
