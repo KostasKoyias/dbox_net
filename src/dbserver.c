@@ -23,17 +23,9 @@ int main(int argc, char* argv[]){
     
     printf("%d\n", portNumber);
 
-    // create socket
-    if((listeningSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbserver: socket creation failed!");
-
-    // bind socket to an address
-    if(bindOnPort(listeningSocket, portNumber) == -1)
-        perror_exit("dbserver: assigning an address to socket failed");
-
-    // mark socket as a passive one
-    if(listen(listeningSocket, BACK_LOG) == -1)
-        perror_exit("dbserver: marking socket as a listening one failed");
+    // create a listening socket, bind it to an address and mark it as a passive one 
+    if((listeningSocket = getListeningSocket(portNumber)) < 0)
+        perror_exit("dbserver: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     while(1){
@@ -47,7 +39,6 @@ int main(int argc, char* argv[]){
         printf("Accepted connection from: %d\t%d\n", htonl(clientAddress.sin_addr.s_addr), htons(clientAddress.sin_port));
         /*********************************************/
 
-
         // get code of request
         if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
             perror("dbserver: failed to get request from client");
@@ -57,18 +48,10 @@ int main(int argc, char* argv[]){
         // ensure request string is terminated
         requestCode[CODE_LEN-1] = '\0';
         fprintf(stdout, "request %s from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, clientAddress.sin_port);
-    
-        // if a client requested to log in, add client to the client list
-        if(strcmp(requestCode, "LOG_ON") == 0 && clientsUpdate(CLIENT_INSERT, responseSocket, &clientlist) < 0)
-            fprintf(stderr, "dbserver: failed to add new client\n");
 
-        // else if a client just asked for the client list, send it right away based on the protocol 
-        else if(strcmp(requestCode, "GET_CLIENTS") == 0 && sendClients(responseSocket, &clientlist) < 0)
-            fprintf(stderr, "dbserver: failed to send client list to a new client\n");
-
-        // else if a client just logged out, remove the client from our client list
-        else if(strcmp(requestCode, "LOG_OFF") == 0 && clientsUpdate(CLIENT_DELETE, responseSocket, &clientlist) < 0)
-            fprintf(stderr, "dbserver: failed to satisfy LOG_OFF request\n");
+        // try and satisfy request, if valid and possible
+        if(handleRequest(requestCode, responseSocket, &clientlist) < 0)
+                fprintf(stderr, "dbserver: failed to satisfy \"%s\" request\n", requestCode);
     
         // close response socket, not to run out of file descriptors
         close(responseSocket);

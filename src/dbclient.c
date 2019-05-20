@@ -9,15 +9,15 @@
 #define HOST_SIZE 256
 
 void usage_error(const char*);
-struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL};
 void handler(int);
 
 int main(int argc, char* argv[]){
-    int i, dirName, workerThreads = 0, bufferSize = 0, serverSocket, listeningSocket;
-    struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET};
-    char hostName[HOST_SIZE];
+    int i, dirName, workerThreads = 0, bufferSize = 0, generalSocket, listeningSocket;
+    struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET}, otherClient;
+    char hostName[HOST_SIZE], requestCode[CODE_LEN];
+    struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
     struct hostent* clientAddress;
-    struct circularBuffer buffer;
+    socklen_t otherClientlen;
 
     signal(SIGINT, handler); // in case of a ^C signal
 
@@ -67,65 +67,95 @@ int main(int argc, char* argv[]){
     client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
 
     // create socket
-    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
         perror_exit("dbclient: server socket creation failed!");
     
     // connect to server
-    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
+    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
         perror_exit("dbclient: connect to server");
     
     // inform server for your arrival issuing a LOG_ON request
-    if(informServer(LOG_ON, serverSocket, &client) < 0)
+    if(informServer(LOG_ON, generalSocket, &client) < 0)
         perror_exit("dbclient: failed inform server on arrival");
 
 
 
     /*****************************************************************Re Connect to server****************************************************************/
     // create socket
-    close(serverSocket);
-    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    close(generalSocket);
+    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
         perror_exit("dbclient: socket creation2 failed!");
-    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
+    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
       perror_exit("dbclient: connect to server2");
     /*****************************************************************************************************************************************************/
 
 
 
     // ask for the client list
-    if(getClients(serverSocket, &client, &buffer, &clientlist) < 0)
+    if(getClients(generalSocket, &client, &rsrc) < 0)
         perror_exit("dbclient: failed to get dbox client list from server");
-    bufferPrint(&buffer);
-    listPrint(&clientlist);
+    bufferPrint(&(rsrc.buffer));
+    listPrint(&(rsrc.list));
 
     // create worker threads
 
 
-    // create a listening socket 
-    if((listeningSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: listening socket creation failed!");
 
+
+    // create a listening socket, bind it to an address and mark it as a passive one 
+    if((listeningSocket = getListeningSocket(client.sin_port)) < 0)
+        perror_exit("dbclient: failed to get a listening socket");
+
+    // accept connections until an interrupt signal is caught
+    /*while(1){
+        fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", client.sin_port, htons(client.sin_port));
+
+        // accept TCP connection
+        if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1)
+            perror_exit("dbserver: accepting connection failed");
+
+        //**************************************    DEPRECATED   *******************************************************
+        printf("Accepted connection from: %d\t%d\n", htonl(otherClient.sin_addr.s_addr), htons(otherClient.sin_port));
+        //**************************************************************************************************************
+
+        // get code of request
+        if(read(generalSocket, requestCode, CODE_LEN) != CODE_LEN){
+            perror("dbserver: failed to get request from client");
+            continue;
+        }
+
+        // ensure request string is terminated
+        requestCode[CODE_LEN-1] = '\0';
+        fprintf(stdout, "request %s from %u %hu\n", requestCode, otherClient.sin_addr.s_addr, otherClient.sin_port);
+
+        handleRequest(argv[dirName], requestCode, generalSocket, &rsrc);
     
+        // close response socket, not to run out of file descriptors
+        close(generalSocket);
+    }*/
+    
+
+
 
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
     /*****************************************************************Re Connect to server****************************************************************/
     // create socket
-    close(serverSocket);
-    if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    close(generalSocket);
+    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
         perror_exit("dbclient: socket creation3 failed!");
-    if(connect(serverSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
+    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
       perror_exit("dbclient: connect to server3");
     /*****************************************************************************************************************************************************/
  
  
  
-    if(informServer(LOG_OFF, serverSocket, &client) < 0)
+    if(informServer(LOG_OFF, generalSocket, &client) < 0)
         perror_exit("dbclient: failed to inform server before exiting");
     
-    close(serverSocket);
-    bufferFree(&buffer);
-    listFree(&clientlist);
+    close(generalSocket);
+    rsrcFree(&rsrc);
     return 0; 
 }
 
@@ -137,6 +167,7 @@ void usage_error(const char *path){
 
 // in case of an interrupt signal
 void handler(int sig){
+
 }
 
 

@@ -14,5 +14,6 @@
 int clientsUpdate(uint8_t, int, struct G_list*);
 int sendClients(int, struct G_list*);
 int informOtherClients(uint8_t, struct clientInfo*, struct G_list*);
+int handleRequest(char*, int, struct G_list*);
 
 #endif

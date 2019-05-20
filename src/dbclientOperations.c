@@ -23,7 +23,7 @@ int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
 }
 
 // get client list from server
-int getClients(int socket, struct sockaddr_in* myAddress, struct circularBuffer* buffer, struct G_list *list){
+int getClients(int socket, struct sockaddr_in* myAddress, struct clientResources* rsrc){
     char requestCode[CODE_LEN] = "GET_CLIENTS";
     struct clientInfo client;
     struct fileInfo file = {.path = "\0", .version = -1}; // version -1 indicates that this is a GET_FILE_LIST task
@@ -38,7 +38,7 @@ int getClients(int socket, struct sockaddr_in* myAddress, struct circularBuffer*
         return -2;
 
     // based on the size just received by the server, initialize buffer to hold information for all files
-    if(bufferInit(len, buffer) < 0)
+    if(bufferInit(len, &(rsrc->buffer)) < 0)
         return -3;
 
     // for each list member
@@ -52,10 +52,67 @@ int getClients(int socket, struct sockaddr_in* myAddress, struct circularBuffer*
 
         // add file to the circular buffer, worker threads have not yet been created, so no need for mutexes here
         clientAssign(&file.owner, &client);
-        bufferAdd(&file, buffer);
+        bufferAdd(&file, &(rsrc->buffer));
 
         // add member to a local list
-        listInsert(list, &client);
+        listInsert(&(rsrc->list), &client);
     }
+    return 0;
+}
+
+// when a connection is established and a request is made, main thread needs to handle it
+int handleRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc){
+
+    if(path == NULL || requestCode == NULL || rsrc == NULL)
+        return -1;
+
+    // if a client requested to log in all file paths under input directory, send them through the socket
+    if(strcmp(requestCode, "GET_FILE_LIST") == 0)
+        return sendFilePaths(socket, path);
+
+    // else if a client asked for a specific file, send it right away based on the protocol 
+    else if(strcmp(requestCode, "GET_FILE") == 0)
+        return sendCertainFile(socket, path);
+
+    // else if this is a message from the server specifying a new user, make sure to get all new files
+    else if(strcmp(requestCode, "USER_ON") == 0)
+        return addClient(socket, rsrc);
+
+    // else if this is a message from the server about a user exiting the system, remove user from user list
+    else if(strcmp(requestCode, "USER_OFF") == 0)
+        return removeClient(socket, rsrc); 
+
+    // else request code is invalid
+    else
+        return -1;
+
+}
+
+// respond to a "GET_FILE_LIST" request by sending all file paths under input directory
+int sendFilePaths(int socket, char* path){
+    return 0;
+}
+
+// respond to a "GET_FILE_LIST" request by getting the exact path and sending all bytes of the file under that path
+int sendCertainFile(int socket, char* path){
+    return 0;
+}
+
+// handle a "USER_ON" send by server
+int addClient(int socket, struct clientResources* rsrc){
+    return 0;
+}
+
+// handle a "USER_ON" send by server
+int removeClient(int socket, struct clientResources* rsrc){
+    return 0;
+}
+
+// free all space allocated for the client to operate
+int rsrcFree(struct clientResources* rsrc){
+    if(rsrc == NULL)
+        return -1;
+    bufferFree(&(rsrc->buffer));
+    listFree(&(rsrc->list));
     return 0;
 }

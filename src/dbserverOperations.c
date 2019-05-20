@@ -51,7 +51,7 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     }
     // else operation code is invalid
     else 
-        return -6;
+        return -5;
 }
 
 // when a user logs in or out, let all other clients know
@@ -63,4 +63,29 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
     else if(eventCode == USER_OFF)
         strcpy(event, "USER_OFF");
     return 0;
+}
+
+int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){
+        int rv;
+        if(requestCode == NULL || clientlist == NULL)
+            return -1;
+
+        // if a client requested to log in, add client to the client list
+        if(strcmp(requestCode, "LOG_ON") == 0)
+            return clientsUpdate(CLIENT_INSERT, responseSocket, clientlist);
+
+        // else if a client just asked for the client list, send it right away based on the protocol 
+        else if(strcmp(requestCode, "GET_CLIENTS") == 0)
+            return sendClients(responseSocket, clientlist);
+
+        // else if a client just logged out, remove the client from our client list
+        else if(strcmp(requestCode, "LOG_OFF") == 0)
+            return clientsUpdate(CLIENT_DELETE, responseSocket, clientlist);
+
+        // else the code passed is invalid
+        else{ 
+            fprintf(stderr, "dbserver: got invalid request code \"%s\"\n", requestCode);
+            return -1;
+        }
+
 }
