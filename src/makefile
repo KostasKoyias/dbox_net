@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g3 #-Wall
 HDRS = define.h utils.h 
-OBJS = utils.o clientInfo.o list.o
+OBJS = utils.o clientInfo.o list.o circularBuffer.o dbserverOperations.o dbclientOperations.o
 LFLAGS = -lpthread -lrt
 SOURCES = utils.c clientInfo.c list.c 
 
@@ -12,7 +12,7 @@ dbserver: dbserver.c $(OBJS)
 	$(CC) $(CFLAGS) -o dbserver dbserver.c dbserverOperations.c $(SOURCES) $(LFLAGS)
 
 dbclient: dbclient.c $(OBJS)
-	$(CC) $(CFLAGS) -o dbclient dbclient.c dbclientOperations.c $(SOURCES) $(LFLAGS)
+	$(CC) $(CFLAGS) -o dbclient dbclient.c dbclientOperations.c circularBuffer.o $(SOURCES) $(LFLAGS)
 
 # data structures and utilities	
 utils.o: utils.c 
@@ -23,6 +23,9 @@ list.o: list.c
 
 clientInfo.o: clientInfo.c 
 	$(CC) $(CFLAGS) -c clientInfo.c $(LFLAGS)
+
+circularBuffer.o: circularBuffer.c
+	$(CC) $(CFLAGS) -c circularBuffer.c $(LFLAGS)
 
 dbserverOperations.o: dbserverOperations.c
 	$(CC) $(CFLAGS) -c dbserverOperations.c $(LFLAGS)

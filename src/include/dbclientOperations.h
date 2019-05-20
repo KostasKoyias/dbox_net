@@ -4,12 +4,13 @@
 #include "list.h"
 #include "clientInfo.h"
 #include "utils.h"
+#include "circularBuffer.h"
 
 #define LOG_ON 0
 #define LOG_OFF 1
 
 /*client operations*/
 int informServer(uint8_t, int, struct sockaddr_in*);
-int getClients(int, struct G_list*);
+int getClients(int, struct sockaddr_in*, struct circularBuffer*, struct G_list*);
 
 #endif

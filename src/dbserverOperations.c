@@ -26,7 +26,6 @@ int sendClients(int socket, struct G_list* list){
 int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     struct clientInfo info;
     char notFound[] = "ERROR_IP_PORT_NOT_FOUND_IN_LIST";
-    int rv;
     if(list == NULL || socket < 0)
         return -1;
 
@@ -61,7 +60,7 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
     
     if(eventCode == USER_ON)
         strcpy(event, "USER_ON");
-    else if(eventCode == USER_OFF);
+    else if(eventCode == USER_OFF)
         strcpy(event, "USER_OFF");
     return 0;
 }

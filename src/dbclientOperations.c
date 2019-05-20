@@ -23,11 +23,11 @@ int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
 }
 
 // get client list from server
-int getClients(int socket, struct G_list *list){
+int getClients(int socket, struct sockaddr_in* myAddress, struct circularBuffer* buffer, struct G_list *list){
     char requestCode[CODE_LEN] = "GET_CLIENTS";
-    struct clientInfo info;
+    struct clientInfo client;
+    struct fileInfo file = {.path = "\0", .version = -1}; // version -1 indicates that this is a GET_FILE_LIST task
     int i, len;
-
 
     // ask for the list
     if(write(socket, requestCode, CODE_LEN) != CODE_LEN)
@@ -37,11 +37,25 @@ int getClients(int socket, struct G_list *list){
     if(read(socket, &len, sizeof(int)) != sizeof(int))
         return -2;
 
-    // for each list member copy information to a local list
+    // based on the size just received by the server, initialize buffer to hold information for all files
+    if(bufferInit(len, buffer) < 0)
+        return -3;
+
+    // for each list member
     for(i = 0; i < len; i++){
-        if(read(socket, &(info.ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(info.portNumber), sizeof(uint16_t)) == -1)
-            return -3-i;
-        listInsert(list, &info);
+        if(read(socket, &(client.ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(client.portNumber), sizeof(uint16_t)) == -1)
+            return -4-i;
+
+        // omit own registration
+        if((client.ipAddress == myAddress->sin_addr.s_addr) && (client.portNumber == myAddress->sin_port))
+            continue;
+
+        // add file to the circular buffer, worker threads have not yet been created, so no need for mutexes here
+        clientAssign(&file.owner, &client);
+        bufferAdd(&file, buffer);
+
+        // add member to a local list
+        listInsert(list, &client);
     }
     return 0;
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "include/define.h"
 #include "include/clientInfo.h"
+#include "include/circularBuffer.h"
 #include "include/list.h"
 #include "include/utils.h"
 #include "include/dbclientOperations.h"
@@ -16,8 +17,38 @@ int main(int argc, char* argv[]){
     struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET};
     char hostName[HOST_SIZE];
     struct hostent* clientAddress;
+    struct circularBuffer buffer;
 
     signal(SIGINT, handler); // in case of a ^C signal
+
+/*********************************************************
+    struct fileInfo file = {.version = 2, .path = "\0"};
+    struct clientInfo cl;
+    bufferInit(2, &buffer);
+    bufferRemove(&file, &buffer);
+    for(i = 0; i < 3; i++){
+        cl.ipAddress = i;
+        cl.portNumber = i*i;
+        clientAssign(&file.owner, &cl);
+        bufferAdd(&file, &buffer);
+        printf("%d:\n", i);
+        bufferPrint(&buffer);
+    }
+    printf("Finally\n");
+    bufferPrint(&buffer);
+
+    printf("Removing\n");
+    for(i = 0; i < 2; i++)
+        bufferRemove(&file, &buffer);
+    bufferPrint(&buffer);
+    bufferFree(&buffer);
+    return 0;
+********************************************************/
+
+
+
+
+
 
     // handle command line arguments, ensure they are all in the appropriate range
     //if(argc != ARGC)
@@ -30,7 +61,7 @@ int main(int argc, char* argv[]){
         
         // convert port number from string to network byte order
         else if(strcmp(argv[i], "-p") == 0)
-            client.sin_port = htons(atoi(argv[i+1]));
+            client.sin_port = htons((uint16_t)atoi(argv[i+1]));
 
         // get number of threads working for this client
         else if(strcmp(argv[i], "-w") == 0)
@@ -53,7 +84,7 @@ int main(int argc, char* argv[]){
             usage_error(argv[0]);
     }
     //if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
-      //  error_exit("dbclient: integer arguments should all be positive\n");
+      //  error_exit("dbclient: Error, all arguments, other than 'dirname' should be positive integers\n");
 
     // get hostname of this machine
     if(gethostname(hostName, HOST_SIZE) == -1)
@@ -63,6 +94,7 @@ int main(int argc, char* argv[]){
     if((clientAddress = gethostbyname(hostName)) == NULL)
         perror_exit("dbclient: getting IP address of client");
     client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
+    client.sin_addr.s_addr = htonl(client.sin_addr.s_addr);
 
     // create socket
     if((serverSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
@@ -86,8 +118,9 @@ int main(int argc, char* argv[]){
     /*****************************************************************************************************************************************************/
 
     // ask for the client list
-    if(getClients(serverSocket, &clientlist) < 0)
+    if(getClients(serverSocket, &client, &buffer, &clientlist) < 0)
         perror_exit("dbclient: failed to get dbox client list from server");
+    bufferPrint(&buffer);
     listPrint(&clientlist);
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
@@ -104,6 +137,7 @@ int main(int argc, char* argv[]){
         perror_exit("dbclient: failed to inform server before exiting");
     
     close(serverSocket);
+    bufferFree(&buffer);
     listFree(&clientlist);
     return 0; 
 }
