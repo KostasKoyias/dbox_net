@@ -21,6 +21,7 @@
 #include <dirent.h>     //readdir
 //#include <sys/wait.h>
 //#include <errno.h>
+#define HOST_SIZE 256
 #define PATH_SIZE 512
 #define CODE_LEN 15
 #define BACK_LOG 5

@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -g3 #-Wall
 LFLAGS = -lpthread -lrt
-SOURCES = utils/utils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c
-RSRC = list.o clientInfo.o circularBuffer.o utils.o 
+SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c
+RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o 
 SERVER = dbserverOperations.o 
 CLIENT = dbclientOperations.o dbclientRequests.o dbclientInit.o dbclientWorker.o
 OBJS = $(RSRC) $(SERVER) $(CLIENT)
@@ -16,11 +16,13 @@ dbserver: server/dbserver.c
 dbclient: client/dbclient.c $(RESOURCES)
 	$(CC) $(CFLAGS) -o dbclient client/*.c $(SOURCES) $(LFLAGS)
 
-# utilities	
-utils.o: utils/utils.c 
-	$(CC) $(CFLAGS) -c utils/utils.c $(LFLAGS)
+# utilities and data structures	
+msgUtils.o: utils/msgUtils.c 
+	$(CC) $(CFLAGS) -c utils/msgUtils.c $(LFLAGS)
 
-# data structures and resources
+netUtils.o: utils/netUtils.c 
+	$(CC) $(CFLAGS) -c utils/netUtils.c $(LFLAGS)
+
 list.o: utils/list.c 
 	$(CC) $(CFLAGS) -c utils/list.c $(LFLAGS)
 

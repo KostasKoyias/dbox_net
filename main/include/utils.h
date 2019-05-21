@@ -9,11 +9,11 @@ int error_return(int, const char*, ...);
 int exclusive_print(int, const char*, ...);
 
 // networking utility methods
+int establishConnection(struct sockaddr_in*, struct sockaddr_in*);
 int getListeningSocket(int);
 int bindOnPort(int, uint16_t);
-int getRequest(char*, char**, int, int, struct sockaddr_in*, socklen_t*);
+int getMyIp(struct in_addr*);
 int statFile(char*);
-int establishConnection(struct sockaddr_in*, struct sockaddr_in*);
 
 
 #endif

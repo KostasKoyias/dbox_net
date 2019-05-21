@@ -1,18 +1,12 @@
 #include <stdio.h>
-#include "../include/define.h"
-#include "../include/clientInfo.h"
-#include "../include/circularBuffer.h"
-#include "../include/list.h"
-#include "../include/utils.h"
 #include "../include/dbclientOperations.h"
 #define ARGC 13
-#define HOST_SIZE 256
-
-void usage_error(const char*);
 
 // in case of an interrupt signal, dbclient shall exit safely through the handler, therefore variables used there are declared globally
 void handler(int);
-void free_rsrc();
+void free_rsrc(int);
+void usage_error(const char*);
+void perror_free(char*);
 pthread_t* threadVector;
 int listeningSocket, workerThreads = 0;
 struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}, .address = {.sin_family = AF_INET}};
@@ -68,14 +62,9 @@ int main(int argc, char* argv[]){
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
         error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
 
-    // get hostname of this machine
-    if(gethostname(hostName, HOST_SIZE) == -1)
-        perror_exit("dbclient: getting hostname of client");
-    
     // get IP address of this machine
-    if((clienthostent = gethostbyname(hostName)) == NULL)
-        perror_exit("dbclient: getting IP address of client");
-    rsrc.address.sin_addr = (*(struct in_addr*)clienthostent->h_addr_list[0]);
+    if(getMyIp(&(rsrc.address.sin_addr)) < 0)
+        perror_exit("dbclient: failed to get IP address of this client");
 
     // create and bind socket to an address, then establish a connection with the server
     if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
@@ -93,32 +82,36 @@ int main(int argc, char* argv[]){
 
     // kick-start worker threads
     if((threadVector = malloc(sizeof(pthread_t) * workerThreads)) == NULL)
-        perror_exit("dbclient: failed to allocate space for a thread id vector");
+        perror_free("dbclient: failed to allocate space for a thread id vector");
+
     for(i = 0; i < workerThreads; i++){
         if(pthread_create(threadVector+i, NULL, dbclientWorker, &rsrc))
-            perror_exit("dbclient: failed to create worker thread");
+            perror_free("dbclient: failed to create worker thread");
     }
 
     // reconnect to server and ask for the client list
     if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
-        perror_exit("dbclient: failed to establish connection at LOG_ON stage"); 
+        perror_free("dbclient: failed to establish connection at LOG_ON stage"); 
+
     if(getClients(generalSocket, &(rsrc.address), &rsrc) < 0)
-        perror_exit("dbclient: failed to get dbox client list from server");
+        perror_free("dbclient: failed to get dbox client list from server");
     close(generalSocket);
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
     // create a listening socket, bind it to an address and mark it as a passive one 
     if((listeningSocket = getListeningSocket(rsrc.address.sin_port)) < 0)
-        perror_exit("dbclient: failed to get a listening socket");
+        perror_free("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
-    /*while(1){
-        fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
+    while(1){
+        fprintf(stdout, "dbclient: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
 
         // accept TCP connection
-        if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1)
-            perror_exit("dbserver: accepting connection failed");
+        if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1){
+            perror("dbclient: accepting connection failed");
+            continue;
+        }
 
         // if peer is neither the server nor a client from the list, close connection immediately
         peerInfo.ipAddress = otherClient.sin_addr.s_addr; peerInfo.portNumber = otherClient.sin_port;
@@ -133,7 +126,7 @@ int main(int argc, char* argv[]){
 
         // get code of request
         if(read(generalSocket, requestCode, FILE_CODE_LEN) != FILE_CODE_LEN){
-            perror("dbserver: failed to get request from client");
+            perror("dbclient: failed to get request from client");
             continue;
         }
 
@@ -141,14 +134,12 @@ int main(int argc, char* argv[]){
         requestCode[FILE_CODE_LEN-1] = '\0';
         fprintf(stdout, "request %s from %u %hu\n", requestCode, otherClient.sin_addr.s_addr, otherClient.sin_port);
 
-        handleRequest(argv[dirName], requestCode, generalSocket, &rsrc);
+        if(handleRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)
+            perror("dbclient: failed to handle request");
     
         // close response socket, not to run out of file descriptors
         close(generalSocket);
-    }*/
-    
-
-    getchar();
+    }
     handler(0);
     return 0; 
 }
@@ -171,17 +162,24 @@ void handler(int sig){
     if((lastSocket = establishConnection(&(rsrc.address), &server)) < 0)
         perror("dbclient: failed to establish a final connection before exiting");
 
-     else if(informServer(LOG_OFF, lastSocket, &(rsrc.address)) < 0)
-        perror_exit("dbclient: failed to inform server before exiting");
-    free_rsrc();
+    else if(informServer(LOG_OFF, lastSocket, &(rsrc.address)) < 0){
+        perror("dbclient: failed to inform server before exiting");
+        close(lastSocket);
+    }
+    free_rsrc(EXIT_SUCCESS);
 }
 
 // free all resources allocated for this client to operate
-void free_rsrc(){    
+void free_rsrc(int exitCode){    
     close(listeningSocket);
     rsrcFree(&rsrc);
     free(threadVector);   
-    exit(EXIT_SUCCESS);
+    exit(exitCode);
+}
+
+void perror_free(char* msg){
+    perror(msg);
+    free_rsrc(EXIT_FAILURE);
 }
 
 

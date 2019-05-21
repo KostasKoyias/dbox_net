@@ -80,7 +80,7 @@ int listPrint(const struct G_list *list){
     struct G_node* parser;
     if(list == NULL || list->head == NULL || list->print == NULL)
         return -1;
-    fprintf(stdout, "\n\e[1m\e[4mClient list\e[0m\n");
+    fprintf(stdout, "\e[1m\e[4mClient list\e[0m\n");
     for(parser = list->head; parser != NULL; parser = parser->next)
         list->print(parser->data);
     return 0;

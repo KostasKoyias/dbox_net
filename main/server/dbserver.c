@@ -1,15 +1,13 @@
 #include <stdio.h>
-#include "../include/define.h"
-#include "../include/clientInfo.h"
-#include "../include/list.h"
 #include "../include/utils.h"
 #include "../include/dbserverOperations.h"
 
 struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL};
 void handler(int);
+uint16_t portNumber = 0;
+
 int main(int argc, char* argv[]){
     int listeningSocket, responseSocket;
-    uint16_t portNumber;
     char requestCode[CODE_LEN];
     struct sockaddr_in clientAddress, peer;
     socklen_t clientlen = sizeof(struct sockaddr_in), peerlen = sizeof(struct sockaddr_in);
@@ -47,7 +45,7 @@ int main(int argc, char* argv[]){
 
         // try and satisfy request, if valid and possible
         if(handleRequest(requestCode, responseSocket, &clientlist) < 0)
-                fprintf(stderr, "dbserver: failed to completely satisfy \"%s\" request\n", requestCode);
+            perror("dbserver: failed to completely satisfy the request");
     
         // close response socket, not to run out of file descriptors
         close(responseSocket);

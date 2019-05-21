@@ -1,5 +1,5 @@
 #include "../include/dbserverOperations.h"
-#include "../include/clientInfo.h"
+#include "../include/utils.h"
 
 // manage each possible client request
 int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){
@@ -19,10 +19,8 @@ int handleRequest(char* requestCode, int responseSocket, struct G_list* clientli
             return clientsUpdate(CLIENT_DELETE, responseSocket, clientlist);
 
         // else the code passed is invalid
-        else{ 
-            fprintf(stderr, "dbserver: got invalid request code \"%s\"\n", requestCode);
+        else 
             return -1;
-        }
 
 }
 
@@ -84,7 +82,8 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
     char event[CODE_LEN];
     struct G_node* iterator;
     int generalSocket, rv = 0;
-    struct sockaddr_in client;
+    extern int portNumber;
+    struct sockaddr_in client, server = {.sin_port = portNumber, .sin_family = AF_INET};
     socklen_t clientlen;
 
     if(info == NULL || list == NULL)
@@ -96,8 +95,15 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
         strcpy(event, "USER_OFF");
 
     // create a socket to use for all clients
-    if(generalSocket = socket(AF_INET, SOCK_STREAM, 0) < 0)
+    if((generalSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         return -1;
+
+    // bind socket to your address, so that clients can recognise that it is the server trying to connect
+    if(getMyIp(&(server.sin_addr)) < 0)
+        return -2;
+    if(bind(generalSocket, (struct sockaddr*)&server, sizeof(server)) < 0)
+        return -3;
+
     
     // for each client in the list
     for(iterator = list->head; iterator != NULL; iterator = iterator->next){
@@ -120,8 +126,6 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
 
         // close and re-use socket
         close(generalSocket);
-            
-
     }
 
     return 0;
