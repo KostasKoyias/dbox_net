@@ -1,38 +1,17 @@
 CC = gcc
-CFLAGS = -g3 #-Wall
-HDRS = define.h utils.h 
-OBJS = utils.o clientInfo.o list.o circularBuffer.o dbserverOperations.o dbclientOperations.o
+CFLAGS = -g3 -Wall
 LFLAGS = -lpthread -lrt
-SOURCES = utils.c clientInfo.c list.c 
+RESOURCES = utils/* rsrc/*
 
-all: dbserver dbclient $(OBJS)  
+all: dbserver dbclient   
 
 # applications
-dbserver: dbserver.c $(OBJS)
-	$(CC) $(CFLAGS) -o dbserver dbserver.c dbserverOperations.c $(SOURCES) $(LFLAGS)
+dbserver: server/dbserver.c 
+	$(CC) $(CFLAGS) -o dbserver server/* $(RESOURCES) $(LFLAGS)
 
-dbclient: dbclient.c $(OBJS)
-	$(CC) $(CFLAGS) -o dbclient dbclient.c dbclientOperations.c circularBuffer.o $(SOURCES) $(LFLAGS)
-
-# data structures and utilities	
-utils.o: utils.c 
-	$(CC) $(CFLAGS) -c utils.c $(LFLAGS)
-
-list.o: list.c 
-	$(CC) $(CFLAGS) -c list.c $(LFLAGS)
-
-clientInfo.o: clientInfo.c 
-	$(CC) $(CFLAGS) -c clientInfo.c $(LFLAGS)
-
-circularBuffer.o: circularBuffer.c
-	$(CC) $(CFLAGS) -c circularBuffer.c $(LFLAGS)
-
-dbserverOperations.o: dbserverOperations.c
-	$(CC) $(CFLAGS) -c dbserverOperations.c $(LFLAGS)
-
-dbclientOperations.o: dbclientOperations.c
-	$(CC) $(CFLAGS) -c dbclientOperations.c $(LFLAGS)
+dbclient: client/dbclient.c
+	$(CC) $(CFLAGS) -o dbclient client/* $(RESOURCES) $(LFLAGS)
 
 clean: 
-	rm -rf $(OBJS) dbserver dbclient
+	rm -rf dbserver dbclient
  

@@ -1,5 +1,5 @@
-#include "include/dbserverOperations.h"
-#include "include/clientInfo.h"
+#include "../include/dbserverOperations.h"
+#include "../include/clientInfo.h"
 
 // send the whole client list via a socket to the client who made the request
 int sendClients(int socket, struct G_list* list){
@@ -66,7 +66,6 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
 }
 
 int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){
-        int rv;
         if(requestCode == NULL || clientlist == NULL)
             return -1;
 

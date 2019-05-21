@@ -1,10 +1,10 @@
 #include <stdio.h>
-#include "include/define.h"
-#include "include/clientInfo.h"
-#include "include/circularBuffer.h"
-#include "include/list.h"
-#include "include/utils.h"
-#include "include/dbclientOperations.h"
+#include "../include/define.h"
+#include "../include/clientInfo.h"
+#include "../include/circularBuffer.h"
+#include "../include/list.h"
+#include "../include/utils.h"
+#include "../include/dbclientOperations.h"
 #define ARGC 13
 #define HOST_SIZE 256
 
@@ -18,6 +18,7 @@ int main(int argc, char* argv[]){
     struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
     struct hostent* clientAddress;
     socklen_t otherClientlen;
+    struct stat statBuffer;
 
     signal(SIGINT, handler); // in case of a ^C signal
 
@@ -57,6 +58,9 @@ int main(int argc, char* argv[]){
     //if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
       //  error_exit("dbclient: Error, all arguments, other than 'dirname' should be positive integers\n");
 
+    //if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
+      //  error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirname]);
+
     // get hostname of this machine
     if(gethostname(hostName, HOST_SIZE) == -1)
         perror_exit("dbclient: getting hostname of client");
@@ -89,7 +93,8 @@ int main(int argc, char* argv[]){
       perror_exit("dbclient: connect to server2");
     /*****************************************************************************************************************************************************/
 
-
+    // initialize circularBuffer, mutexes and conditions
+    rsrcInit(&rsrc, bufferSize);
 
     // ask for the client list
     if(getClients(generalSocket, &client, &rsrc) < 0)
@@ -97,9 +102,6 @@ int main(int argc, char* argv[]){
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
-    // initialize mutexes
-    pthread_mutex_init(&(rsrc.bufferMutex), NULL);
-    pthread_mutex_init(&(rsrc.listMutex), NULL);
 
 
     // create worker threads
@@ -125,9 +127,9 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        //**************************************    DEPRECATED   *******************************************************
+        // **************************************    DEPRECATED   *******************************************************
         printf("Accepted connection from: %d\t%d\n", htonl(otherClient.sin_addr.s_addr), htons(otherClient.sin_port));
-        //**************************************************************************************************************
+        // **************************************************************************************************************
 
         // get code of request
         if(read(generalSocket, requestCode, CODE_LEN) != CODE_LEN){

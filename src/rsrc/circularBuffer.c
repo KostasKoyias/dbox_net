@@ -1,4 +1,4 @@
-#include "include/circularBuffer.h"
+#include "../include/circularBuffer.h"
 
 // copy all information about a file to another
 int fileAssign(struct fileInfo* fileA, const struct fileInfo* fileB){
@@ -73,7 +73,6 @@ int bufferRemove(struct fileInfo* file, struct circularBuffer* buffer){
 
 // if the next position to insert at is taken return 0, else 1
 int bufferIsFull(struct circularBuffer* buffer){
-    int nextPositionAvailable;
     if(buffer == NULL)
         return -1;
 

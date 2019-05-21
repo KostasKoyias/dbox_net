@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include "include/define.h"
-#include "include/clientInfo.h"
-#include "include/list.h"
-#include "include/utils.h"
-#include "include/dbserverOperations.h"
+#include "../include/define.h"
+#include "../include/clientInfo.h"
+#include "../include/list.h"
+#include "../include/utils.h"
+#include "../include/dbserverOperations.h"
 
 struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL};
 void handler(int);

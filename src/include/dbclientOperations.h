@@ -21,8 +21,7 @@ struct clientResources{
     struct G_list list;
 };
 
-
-/*client operations*/
+//client operations
 int informServer(uint8_t, int, struct sockaddr_in*);
 int getClients(int, struct sockaddr_in*, struct clientResources*);
 int handleRequest(char*, char*, int, struct clientResources*);
@@ -32,6 +31,7 @@ int handleUser(int, int, struct clientResources*);
 int sendFile(int, char*);
 int addClient(struct clientInfo*, struct clientResources*);
 int removeClient(struct clientInfo*, struct clientResources*);
+int rsrcInit(struct clientResources*, int);
 int rsrcFree(struct clientResources*);
 int confirmClient(struct sockaddr_in*, struct clientResources*);
 #endif
