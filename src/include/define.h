@@ -23,7 +23,7 @@
 //#include <time.h>
 //#include <semaphore.h>
 //#include <errno.h>
-#define PATH_SIZE 256
+#define PATH_SIZE 512
 #define CODE_LEN 15
 #define BACK_LOG 5
 #define SOCKET_CAPACITY 1024

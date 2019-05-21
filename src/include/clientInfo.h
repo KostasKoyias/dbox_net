@@ -8,7 +8,6 @@ struct clientInfo{
     uint16_t portNumber;
 };
 
-
 // client linked list member methods
 void* clientCompare(void*, const void*);
 int clientAssign(void*, const void*);
