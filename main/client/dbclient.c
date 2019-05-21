@@ -13,12 +13,12 @@ void handler(int);
 
 int main(int argc, char* argv[]){
     int i, dirName, workerThreads = 0, bufferSize = 0, generalSocket, listeningSocket;
-    struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET}, otherClient;
+    struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET}, otherClient = {.sin_family = AF_INET};
     char hostName[HOST_SIZE], requestCode[FILE_CODE_LEN];
     struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
     struct hostent* clientAddress;
     struct clientInfo peerInfo;
-    socklen_t otherClientlen;
+    socklen_t otherClientlen = sizeof(struct sockaddr);
     struct stat statBuffer;
     pthread_t* threadVector;
 
@@ -75,7 +75,19 @@ int main(int argc, char* argv[]){
     // create socket
     if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
         perror_exit("dbclient: server socket creation failed!");
-    
+
+
+
+
+    //***********************************************************************************************************************************
+    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));
+    //***********************************************************************************************************************************
+
+
+
+
+
+
     // connect to server
     if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
         perror_exit("dbclient: connect to server");
@@ -101,12 +113,10 @@ int main(int argc, char* argv[]){
 
 
     // *****************************************************************Re Connect to server****************************************************************
-    // create socket
     close(generalSocket);
-    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: socket creation2 failed!");
-    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
-      perror_exit("dbclient: connect to server2");
+    generalSocket = socket(AF_INET , SOCK_STREAM , 0);
+    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));    
+    connect(generalSocket, (struct sockaddr*)&server, sizeof(server));
     // *****************************************************************************************************************************************************
 
 
@@ -127,7 +137,7 @@ int main(int argc, char* argv[]){
         perror_exit("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
-    while(1){
+    /*while(1){
         fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", client.sin_port, htons(client.sin_port));
 
         // accept TCP connection
@@ -159,7 +169,7 @@ int main(int argc, char* argv[]){
     
         // close response socket, not to run out of file descriptors
         close(generalSocket);
-    }
+    }*/
     
 
 
@@ -170,12 +180,10 @@ int main(int argc, char* argv[]){
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
     // *****************************************************************Re Connect to server****************************************************************
-    // create socket
     close(generalSocket);
-    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: socket creation3 failed!");
-    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
-      perror_exit("dbclient: connect to server3");
+    generalSocket = socket(AF_INET , SOCK_STREAM , 0);
+    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));    
+    connect(generalSocket, (struct sockaddr*)&server, sizeof(server));
     // *****************************************************************************************************************************************************
  
 

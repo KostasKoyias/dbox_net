@@ -11,8 +11,8 @@ int main(int argc, char* argv[]){
     int listeningSocket, responseSocket;
     uint16_t portNumber;
     char requestCode[CODE_LEN];
-    struct sockaddr_in clientAddress;
-    socklen_t clientlen = 0;
+    struct sockaddr_in clientAddress, peer;
+    socklen_t clientlen = sizeof(struct sockaddr_in), peerlen = sizeof(struct sockaddr_in);
 
     // declare handler in case of an interrupt signal received
     signal(SIGINT, handler);
@@ -35,9 +35,18 @@ int main(int argc, char* argv[]){
         if((responseSocket = accept(listeningSocket, (struct sockaddr*)&clientAddress, &clientlen)) == -1)
             perror_exit("dbserver: accepting connection failed");
 
-        /**********************************************/
-        printf("Accepted connection from: %d\t%d\n", htonl(clientAddress.sin_addr.s_addr), htons(clientAddress.sin_port));
-        /*********************************************/
+
+
+        // ****************************************************************************************************************/
+        getpeername(responseSocket, (struct sockaddr*)&peer, &peerlen);
+        char ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(peer.sin_addr), ip, INET_ADDRSTRLEN);
+        struct in_addr addr;
+        inet_aton(ip, &addr);
+        printf("Accepted connection from: %s %d %d\t%d\n", ip, addr.s_addr, peer.sin_addr.s_addr, ntohs(peer.sin_port));
+        // ****************************************************************************************************************/
+
+
 
         // get code of request
         if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
