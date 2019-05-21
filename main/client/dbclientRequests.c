@@ -1,5 +1,4 @@
 #include "../include/dbclientOperations.h"
-#include "../include/clientInfo.h"
 
 // when a connection is established and a request is made, main thread needs to handle it
 int handleRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc){
@@ -74,6 +73,12 @@ int handleGetFileList(int socket, char* dirPath){
                 closedir(dirPointer);
                 return -4;
             }
+
+            // then send current file version
+            if(write(socket, (int*)(&(statBuffer.st_mtime)), sizeof(int)) != sizeof(int)){
+                closedir(dirPointer);
+                return -5;
+            }
         }
     }
 
@@ -82,7 +87,7 @@ int handleGetFileList(int socket, char* dirPath){
         flag = 0;
         if(write(socket, &flag, sizeof(int)) != sizeof(int)){
             closedir(dirPointer);
-            return -5;
+            return -6;
         }
 
     }
@@ -105,7 +110,7 @@ int handleGetFile(int socket, char* directoryPath){
     // append to directory path to get full path 
     sprintf(fullPath, "%s/%s", directoryPath, relativePath);
 
-    // get status of file, return FILE_NOT_FOUND in case of failure
+    // get version of file, return FILE_NOT_FOUND if it does not exists
     if(stat(fullPath, &statBuffer) == -1){
         strcpy(responseCode, "FILE_NOT_FOUND");
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
@@ -162,18 +167,18 @@ int handleGetFile(int socket, char* directoryPath){
 
 // handle a request from server about a new or exiting user
 int handleUser(int code, int socket, struct clientResources* rsrc){
-    struct clientInfo clientInfo;
+    struct fileInfo fileInfo = {.path = "\0", .version = -1}; //version -1 indicates that this is a GET_FILE_LIST task
     if(rsrc == NULL)
         return -1;
 
     // get (IP, port) pair of the client
-    if(getClientInfo(socket, &clientInfo) < 0)
+    if(getClientInfo(socket, &(fileInfo.owner)) < 0)
         return -2;
     
     if(code == USER_ON)
-        return addClient(&clientInfo, rsrc);
+        return addClient(&fileInfo, rsrc);
     else if(code == USER_OFF)
-        return removeClient(&clientInfo, rsrc);
+        return removeClient(&(fileInfo.owner), rsrc);
     else 
         return -3;
 }

@@ -1,5 +1,4 @@
 #include "../include/dbclientOperations.h"
-#include "../include/clientInfo.h"
 
 // let server know about a new or an outgoing client 
 int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
@@ -25,7 +24,7 @@ int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
 // get client list from server
 int getClients(int socket, struct sockaddr_in* myAddress, struct clientResources* rsrc){
     char requestCode[CODE_LEN] = "GET_CLIENTS";
-    struct clientInfo client;
+    struct fileInfo fileInfo = {.path = "\0", .version = -1}; //version -1 indicates that this is a GET_FILE_LIST task
     int i, len;
 
     // ask for the list
@@ -38,15 +37,15 @@ int getClients(int socket, struct sockaddr_in* myAddress, struct clientResources
 
     // for each list member
     for(i = 0; i < len; i++){
-        if(read(socket, &(client.ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(client.portNumber), sizeof(uint16_t)) == -1)
+        if(read(socket, &(fileInfo.owner.ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(fileInfo.owner.portNumber), sizeof(uint16_t)) == -1)
             return -4-2*i;
 
         // omit own registration
-        if((client.ipAddress == myAddress->sin_addr.s_addr) && (client.portNumber == myAddress->sin_port))
+        if((fileInfo.owner.ipAddress == myAddress->sin_addr.s_addr) && (fileInfo.owner.portNumber == myAddress->sin_port))
             continue;
 
         // add new client to both the buffer and the client list
-        if(addClient(&client, rsrc) < 0)
+        if(addClient(&fileInfo, rsrc) < 0)
             return -5-2*i;
     }
     return 0;

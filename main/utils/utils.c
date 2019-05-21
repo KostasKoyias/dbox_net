@@ -95,3 +95,14 @@ int getRequest(char* name, char** requestCode, int listeningSocket, int portNumb
     return socket;
 
 }
+
+// check whether a file exists on this file system and return the lastest version id
+int statFile(char* path){
+    struct stat statBuffer;
+
+    // get status of file, return FILE_NOT_FOUND in case of failure
+    if(stat(path, &statBuffer) == -1)
+        return -1;
+    else 
+        return (int)statBuffer.st_mtime;
+}

@@ -12,6 +12,7 @@ int exclusive_print(int, const char*, ...);
 int getListeningSocket(int);
 int bindOnPort(int, uint16_t);
 int getRequest(char*, char**, int, int, struct sockaddr_in*, socklen_t*);
+int statFile(char*);
 
 
 #endif

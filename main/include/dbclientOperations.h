@@ -21,17 +21,27 @@ struct clientResources{
     struct G_list list;
 };
 
-//client operations
+//initialization
 int informServer(uint8_t, int, struct sockaddr_in*);
 int getClients(int, struct sockaddr_in*, struct clientResources*);
+
+//request handling on main thread
 int handleRequest(char*, char*, int, struct clientResources*);
 int handleGetFileList(int, char*);
 int handleGetFile(int, char*);
 int handleUser(int, int, struct clientResources*);
-int sendFile(int, char*);
-int addClient(struct clientInfo*, struct clientResources*);
+
+//worker thread methods
+void* dbclientWorker(void*);
+int getFileList(int, struct clientResources*, struct fileInfo*);
+int getFile(int, struct clientResources*, struct fileInfo*);
+
+
+//general client operations
+int addClient(struct fileInfo*, struct clientResources*);
+int addTask(struct fileInfo*, struct clientResources*);
 int removeClient(struct clientInfo*, struct clientResources*);
 int rsrcInit(struct clientResources*, int);
 int rsrcFree(struct clientResources*);
-int confirmClient(struct sockaddr_in*, struct clientResources*);
+int confirmClient(struct clientInfo*, struct clientResources*);
 #endif
