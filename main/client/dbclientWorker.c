@@ -22,17 +22,16 @@ void* dbclientWorker(void* arg){
         pthread_cond_signal(&(rsrc->fullBuffer));   // signal a pending thread
         pthread_mutex_unlock(&(rsrc->bufferMutex));
 
-        // create socket 
-        if((sock = socket(AF_INET , SOCK_STREAM , 0)) == -1){
-            perror("dbclient: working thread failed to create socket");
-            continue;
-        }
 
-        //establish connection with peer
+        // ensure that the client is really a member of the client list
+        if(confirmClient(&(task.owner), rsrc) != 1)    
+            continue;
+
+        // create socket, bind it to an address and establish a connection with peer
         peer.sin_addr.s_addr = task.owner.ipAddress;
         peer.sin_port = task.owner.portNumber;
-        if(connect(sock, (struct sockaddr*)&peer, sizeof(peer)) == -1){
-            perror("dbclient: working thread failed to connect");
+        if((sock = establishConnection(&(rsrc->address), &peer)) < 0){
+            perror("dbclient: working thread failed to establish connection with peer");
             continue;
         }
 
@@ -85,10 +84,6 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     int version, fileSize, sizeRead, sliceSize, localFile;
     if(rsrc == NULL || task == NULL)
         return -1;
-
-    // ensure that the client is really a member of the client list
-    if(confirmClient(&(task->owner), rsrc) != 1)    
-        return -2;
 
     // ask for the file
     strcpy(codeBuffer, "GET_FILE");

@@ -44,6 +44,23 @@ int exclusive_print(int fd, const char* format, ...){
     return 0;
 }
 
+int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
+    int newSocket;
+
+    // create new socket
+    if((newSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        return -1;
+
+    // associate this socket with the client's address
+    if(bind(newSocket, (struct sockaddr*)client, sizeof(*client)) < 0)
+        return -2;    
+
+    // connect to server
+    if(connect(newSocket, (struct sockaddr*)server, sizeof(*server)) == -1)
+        return -3;
+    return newSocket;
+}
+
 // create a listening socket, bind it to an address and mark it as a passive one 
 int getListeningSocket(int portNumber){
     int listeningSocket;

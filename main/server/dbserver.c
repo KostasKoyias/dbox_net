@@ -29,24 +29,11 @@ int main(int argc, char* argv[]){
 
     // accept connections until an interrupt signal is caught
     while(1){
-        fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", portNumber, htons(portNumber));
+        fprintf(stdout, "\ndbserver: handling requests on port %hu(h)/%hu(n)\n", portNumber, htons(portNumber));
 
         // accept TCP connection
         if((responseSocket = accept(listeningSocket, (struct sockaddr*)&clientAddress, &clientlen)) == -1)
             perror_exit("dbserver: accepting connection failed");
-
-
-
-        // ****************************************************************************************************************/
-        getpeername(responseSocket, (struct sockaddr*)&peer, &peerlen);
-        char ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(peer.sin_addr), ip, INET_ADDRSTRLEN);
-        struct in_addr addr;
-        inet_aton(ip, &addr);
-        printf("Accepted connection from: %s %d %d\t%d\n", ip, addr.s_addr, peer.sin_addr.s_addr, ntohs(peer.sin_port));
-        // ****************************************************************************************************************/
-
-
 
         // get code of request
         if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
@@ -56,7 +43,7 @@ int main(int argc, char* argv[]){
 
         // ensure request string is terminated
         requestCode[CODE_LEN-1] = '\0';
-        fprintf(stdout, "request %s from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, clientAddress.sin_port);
+        fprintf(stdout, "dbserver: received request '%s' from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, clientAddress.sin_port);
 
         // try and satisfy request, if valid and possible
         if(handleRequest(requestCode, responseSocket, &clientlist) < 0)

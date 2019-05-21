@@ -9,18 +9,23 @@
 #define HOST_SIZE 256
 
 void usage_error(const char*);
+
+// in case of an interrupt signal, dbclient shall exit safely through the handler, therefore variables used there are declared globally
 void handler(int);
+void free_rsrc();
+pthread_t* threadVector;
+int listeningSocket, workerThreads = 0;
+struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}, .address = {.sin_family = AF_INET}};
+struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0};
 
 int main(int argc, char* argv[]){
-    int i, dirName, workerThreads = 0, bufferSize = 0, generalSocket, listeningSocket;
-    struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0}, client = {.sin_family = AF_INET}, otherClient = {.sin_family = AF_INET};
+    int i, dirName, generalSocket, bufferSize = 0;
+    struct sockaddr_in otherClient = {.sin_family = AF_INET};
     char hostName[HOST_SIZE], requestCode[FILE_CODE_LEN];
-    struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
-    struct hostent* clientAddress;
+    struct hostent* clienthostent;
     struct clientInfo peerInfo;
-    socklen_t otherClientlen = sizeof(struct sockaddr);
+    socklen_t otherClientlen = sizeof(struct sockaddr_in);
     struct stat statBuffer;
-    pthread_t* threadVector;
 
     signal(SIGINT, handler); // in case of a ^C signal
 
@@ -35,7 +40,7 @@ int main(int argc, char* argv[]){
         
         // convert port number from string to network byte order
         else if(strcmp(argv[i], "-p") == 0)
-            client.sin_port = htons((uint16_t)atoi(argv[i+1]));
+            rsrc.address.sin_port = htons((uint16_t)atoi(argv[i+1]));
 
         // get number of threads working for this client
         else if(strcmp(argv[i], "-w") == 0)
@@ -57,7 +62,7 @@ int main(int argc, char* argv[]){
         else
             usage_error(argv[0]);
     }
-    /*if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
+    /*if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || rsrc.address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
         error_exit("dbclient: Error, all arguments, other than 'dirname' should be positive integers\n");
 
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
@@ -68,33 +73,20 @@ int main(int argc, char* argv[]){
         perror_exit("dbclient: getting hostname of client");
     
     // get IP address of this machine
-    if((clientAddress = gethostbyname(hostName)) == NULL)
+    if((clienthostent = gethostbyname(hostName)) == NULL)
         perror_exit("dbclient: getting IP address of client");
-    client.sin_addr = (*(struct in_addr*)clientAddress->h_addr_list[0]);
+    rsrc.address.sin_addr = (*(struct in_addr*)clienthostent->h_addr_list[0]);
 
-    // create socket
-    if((generalSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
-        perror_exit("dbclient: server socket creation failed!");
-
-
-
-
-    //***********************************************************************************************************************************
-    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));
-    //***********************************************************************************************************************************
-
-
-
-
-
-
-    // connect to server
-    if(connect(generalSocket, (struct sockaddr*)&server, sizeof(server)) == -1)
-        perror_exit("dbclient: connect to server");
+    // create and bind socket to an address, then establish a connection with the server
+    if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
+        perror_exit("dbclient: failed to establish connection at LOG_ON stage");
     
     // inform server for your arrival issuing a LOG_ON request
-    if(informServer(LOG_ON, generalSocket, &client) < 0)
+    if(informServer(LOG_ON, generalSocket, &(rsrc.address)) < 0)
         perror_exit("dbclient: failed inform server on arrival");
+
+    // close connetcion
+    close(generalSocket);
 
     // initialize circularBuffer, mutexes and conditions
     rsrcInit(&rsrc, bufferSize);
@@ -107,38 +99,22 @@ int main(int argc, char* argv[]){
             perror_exit("dbclient: failed to create worker thread");
     }
 
-
-
-
-
-
-    // *****************************************************************Re Connect to server****************************************************************
-    close(generalSocket);
-    generalSocket = socket(AF_INET , SOCK_STREAM , 0);
-    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));    
-    connect(generalSocket, (struct sockaddr*)&server, sizeof(server));
-    // *****************************************************************************************************************************************************
-
-
-
-
-
-
-
-
-    // ask for the client list
-    if(getClients(generalSocket, &client, &rsrc) < 0)
+    // reconnect to server and ask for the client list
+    if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
+        perror_exit("dbclient: failed to establish connection at LOG_ON stage"); 
+    if(getClients(generalSocket, &(rsrc.address), &rsrc) < 0)
         perror_exit("dbclient: failed to get dbox client list from server");
+    close(generalSocket);
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
     // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(client.sin_port)) < 0)
+    if((listeningSocket = getListeningSocket(rsrc.address.sin_port)) < 0)
         perror_exit("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     /*while(1){
-        fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", client.sin_port, htons(client.sin_port));
+        fprintf(stdout, "dbserver: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
 
         // accept TCP connection
         if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1)
@@ -152,7 +128,7 @@ int main(int argc, char* argv[]){
         }
 
         // **************************************    DEPRECATED   *******************************************************
-        printf("Accepted connection from: %d\t%d\n", htonl(otherClient.sin_addr.s_addr), htons(otherClient.sin_port));
+        printf("Accepted connection from: %d\t%d\n", otherClient.sin_addr.s_addr, otherClient.sin_port);
         // **************************************************************************************************************
 
         // get code of request
@@ -172,34 +148,8 @@ int main(int argc, char* argv[]){
     }*/
     
 
-
-
-
-
-
-    // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
-    // *****************************************************************Re Connect to server****************************************************************
-    close(generalSocket);
-    generalSocket = socket(AF_INET , SOCK_STREAM , 0);
-    bind(generalSocket, (struct sockaddr*)&clientAddress, sizeof(client));    
-    connect(generalSocket, (struct sockaddr*)&server, sizeof(server));
-    // *****************************************************************************************************************************************************
- 
-
-
-
-
-
-
-
-    if(informServer(LOG_OFF, generalSocket, &client) < 0)
-        perror_exit("dbclient: failed to inform server before exiting");
-    
-    close(listeningSocket);
-    close(generalSocket);
-    rsrcFree(&rsrc);
-    free(threadVector);
+    handler(0);
     return 0; 
 }
 
@@ -211,6 +161,26 @@ void usage_error(const char *path){
 
 // in case of an interrupt signal
 void handler(int sig){
+    int i, lastSocket;
+
+    // let main thread join workers
+    for(i = 0; i < workerThreads; i++)
+        pthread_join(threadVector[i], NULL);
+
+    // let server know that you are about to exit dbox system issuing a LOG_OFF request
+    if((lastSocket = establishConnection(&(rsrc.address), &server)) < 0)
+        perror("dbclient: failed to establish a final connection before exiting");
+
+     else if(informServer(LOG_OFF, lastSocket, &(rsrc.address)) < 0)
+        perror_exit("dbclient: failed to inform server before exiting");
+    free_rsrc();
+}
+
+// free all resources allocated for this client to operate
+void free_rsrc(){    
+    close(listeningSocket);
+    rsrcFree(&rsrc);
+    free(threadVector);   
     exit(EXIT_SUCCESS);
 }
 

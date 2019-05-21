@@ -19,6 +19,7 @@ struct clientResources{
     pthread_cond_t emptyBuffer;
     pthread_mutex_t listMutex;
     struct G_list list;
+    struct sockaddr_in address;
 };
 
 //initialization
