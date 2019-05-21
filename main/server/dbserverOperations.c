@@ -1,6 +1,31 @@
 #include "../include/dbserverOperations.h"
 #include "../include/clientInfo.h"
 
+// manage each possible client request
+int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){
+        if(requestCode == NULL || clientlist == NULL)
+            return -1;
+
+        // if a client requested to log in, add client to the client list
+        if(strcmp(requestCode, "LOG_ON") == 0)
+            return clientsUpdate(CLIENT_INSERT, responseSocket, clientlist);
+
+        // else if a client just asked for the client list, send it right away based on the protocol 
+        else if(strcmp(requestCode, "GET_CLIENTS") == 0)
+            return sendClients(responseSocket, clientlist);
+
+        // else if a client just logged out, remove the client from our client list
+        else if(strcmp(requestCode, "LOG_OFF") == 0)
+            return clientsUpdate(CLIENT_DELETE, responseSocket, clientlist);
+
+        // else the code passed is invalid
+        else{ 
+            fprintf(stderr, "dbserver: got invalid request code \"%s\"\n", requestCode);
+            return -1;
+        }
+
+}
+
 // send the whole client list via a socket to the client who made the request
 int sendClients(int socket, struct G_list* list){
     struct G_node* iterator;
@@ -56,35 +81,48 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
 
 // when a user logs in or out, let all other clients know
 int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list* list){
-    char event[EVENT_SIZE];
+    char event[CODE_LEN];
+    struct G_node* iterator;
+    int generalSocket, rv = 0;
+    struct sockaddr_in client;
+    socklen_t clientlen;
+
+    if(info == NULL || list == NULL)
+        return -1;
     
     if(eventCode == USER_ON)
         strcpy(event, "USER_ON");
     else if(eventCode == USER_OFF)
         strcpy(event, "USER_OFF");
-    return 0;
-}
 
-int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){
-        if(requestCode == NULL || clientlist == NULL)
-            return -1;
+    // create a socket to use for all clients
+    if(generalSocket = socket(AF_INET, SOCK_STREAM, 0) < 0)
+        return -1;
+    
+    // for each client in the list
+    for(iterator = list->head; iterator != NULL; iterator = iterator->next){
+        client.sin_addr.s_addr = info->ipAddress;
+        client.sin_port = info->portNumber;
 
-        // if a client requested to log in, add client to the client list
-        if(strcmp(requestCode, "LOG_ON") == 0)
-            return clientsUpdate(CLIENT_INSERT, responseSocket, clientlist);
-
-        // else if a client just asked for the client list, send it right away based on the protocol 
-        else if(strcmp(requestCode, "GET_CLIENTS") == 0)
-            return sendClients(responseSocket, clientlist);
-
-        // else if a client just logged out, remove the client from our client list
-        else if(strcmp(requestCode, "LOG_OFF") == 0)
-            return clientsUpdate(CLIENT_DELETE, responseSocket, clientlist);
-
-        // else the code passed is invalid
-        else{ 
-            fprintf(stderr, "dbserver: got invalid request code \"%s\"\n", requestCode);
-            return -1;
+        // establish a connection with the client
+        if(connect(generalSocket, (struct sockaddr*)&client, sizeof(client)) < 0){
+            rv--;
+            continue;
         }
 
+        // inform client
+        if((write(generalSocket, event, CODE_LEN) != CODE_LEN) 
+            || write(generalSocket, &(info->ipAddress), sizeof(info->ipAddress))
+            || write(generalSocket, &(info->portNumber), sizeof(info->portNumber))){
+                rv--;
+                continue;
+        }
+
+        // close and re-use socket
+        close(generalSocket);
+            
+
+    }
+
+    return 0;
 }

@@ -8,7 +8,6 @@
 #define CLIENT_DELETE 1
 #define USER_ON 0
 #define USER_OFF 1
-#define EVENT_SIZE 10
 
 /*server operations*/
 int clientsUpdate(uint8_t, int, struct G_list*);

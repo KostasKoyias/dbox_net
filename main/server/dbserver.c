@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
 
         // try and satisfy request, if valid and possible
         if(handleRequest(requestCode, responseSocket, &clientlist) < 0)
-                fprintf(stderr, "dbserver: failed to satisfy \"%s\" request\n", requestCode);
+                fprintf(stderr, "dbserver: failed to completely satisfy \"%s\" request\n", requestCode);
     
         // close response socket, not to run out of file descriptors
         close(responseSocket);

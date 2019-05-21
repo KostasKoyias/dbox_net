@@ -57,11 +57,11 @@ int main(int argc, char* argv[]){
         else
             usage_error(argv[0]);
     }
-    if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
+    /*if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || client.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
         error_exit("dbclient: Error, all arguments, other than 'dirname' should be positive integers\n");
 
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
-        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);
+        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
 
     // get hostname of this machine
     if(gethostname(hostName, HOST_SIZE) == -1)
@@ -84,6 +84,20 @@ int main(int argc, char* argv[]){
     if(informServer(LOG_ON, generalSocket, &client) < 0)
         perror_exit("dbclient: failed inform server on arrival");
 
+    // initialize circularBuffer, mutexes and conditions
+    rsrcInit(&rsrc, bufferSize);
+
+    // kick-start worker threads
+    if((threadVector = malloc(sizeof(pthread_t) * workerThreads)) == NULL)
+        perror_exit("dbclient: failed to allocate space for a thread id vector");
+    for(i = 0; i < workerThreads; i++){
+        if(pthread_create(threadVector+i, NULL, dbclientWorker, &rsrc))
+            perror_exit("dbclient: failed to create worker thread");
+    }
+
+
+
+
 
 
     // *****************************************************************Re Connect to server****************************************************************
@@ -95,16 +109,10 @@ int main(int argc, char* argv[]){
       perror_exit("dbclient: connect to server2");
     // *****************************************************************************************************************************************************
 
-    // initialize circularBuffer, mutexes and conditions
-    rsrcInit(&rsrc, bufferSize);
 
-    // kick-start worker threads
-    if((threadVector = malloc(sizeof(pthread_t) * workerThreads)) == NULL)
-        perror_exit("dbclient: failed to allocate space for a thread id vector");
-    for(i = 0; i < workerThreads; i++){
-        if(pthread_create(threadVector+i, NULL, dbclientWorker, &rsrc))
-            perror_exit("dbclient: failed to create worker thread");
-    }
+
+
+
 
 
 
@@ -157,6 +165,8 @@ int main(int argc, char* argv[]){
 
 
 
+
+
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     getchar();
     // *****************************************************************Re Connect to server****************************************************************
@@ -168,6 +178,10 @@ int main(int argc, char* argv[]){
       perror_exit("dbclient: connect to server3");
     // *****************************************************************************************************************************************************
  
+
+
+
+
 
 
 
@@ -189,7 +203,7 @@ void usage_error(const char *path){
 
 // in case of an interrupt signal
 void handler(int sig){
-
+    exit(EXIT_SUCCESS);
 }
 
 
