@@ -30,7 +30,63 @@ int handleRequest(char* path, char* requestCode, int socket, struct clientResour
 }
 
 // respond to a "GET_FILE_LIST" request by sending all file paths under input directory
-int handleGetFileList(int socket, char* path){
+int handleGetFileList(int socket, char* dirPath){
+    struct dirent* filePointer;
+    struct stat statBuffer;
+    static int flag = -1;    // retains value through out recursive calls
+    int pathSize, isRoot = 0;
+    char fullPath[PATH_SIZE];
+    DIR* dirPointer;
+    if(dirPath == NULL)
+        return -1;
+    
+    // first call to this recursive function is responsible for letting peer know that transaction was completed
+    if(flag == -1)
+        isRoot = flag = 1;
+
+    // open input directory
+    if((dirPointer = opendir(dirPath)) == NULL)
+        return -2;
+    
+    while((filePointer = readdir(dirPointer)) != NULL){
+
+        // omit current, parent, hidden files/directories as well as too long path names
+        pathSize = strlen(dirPath) + strlen(filePointer->d_name);
+        if((filePointer->d_name[0] == '.') ||  pathSize > PATH_SIZE-2)
+            continue;
+
+        // get status of file under full path
+        sprintf(fullPath, "%s/%s", dirPath, filePointer->d_name);
+        if(stat(fullPath, &statBuffer) == -1){
+            closedir(dirPointer);
+            return -3;
+        }
+        
+        // if it is a directory, repeat recursively
+        if(S_ISDIR(statBuffer.st_mode))
+            handleGetFileList(socket, fullPath);
+
+        // else if it is a regular file send it throught the socket
+        else{
+
+            // first let peer know about the path size, that many bytes will later on be read
+            if(write(socket, &pathSize, sizeof(int)) != sizeof(int) || (write(socket, fullPath, pathSize) != pathSize)){
+                closedir(dirPointer);
+                return -4;
+            }
+        }
+    }
+
+    // inform peer that transaction is completed by sending path length equal to 0
+    if(isRoot){
+        flag = 0;
+        if(write(socket, &flag, sizeof(int)) != sizeof(int)){
+            closedir(dirPointer);
+            return -5;
+        }
+
+    }
+    closedir(dirPointer);
     return 0;
 }
 

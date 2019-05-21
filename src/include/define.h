@@ -18,12 +18,12 @@
 #include <time.h>        //timespec,time_t
 #include <sys/types.h>
 #include <pthread.h>     //threads, mutexes
-//#include <dirent.h>
+#include <dirent.h>     //readdir
 //#include <sys/wait.h>
 //#include <time.h>
 //#include <semaphore.h>
 //#include <errno.h>
-#define PATH_SIZE 128
+#define PATH_SIZE 256
 #define CODE_LEN 15
 #define BACK_LOG 5
 #define SOCKET_CAPACITY 1024
