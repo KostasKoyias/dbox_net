@@ -3,13 +3,28 @@
 \*************************************************************************************************************/
 #include "../include/utils.h"
 
-// given a client-server pair of addresses establish a connection between them
-// letting the server know who the client is by assigning the address of the client to his socket
-int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
-    int newSocket;
+// create a socket, declaring that the address to be assigned to it, is reusable
+int getReuseAddrSocket(){
+    int newSocket, option = 1;
 
     // create new socket
     if((newSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        return -1;
+
+    // make address re-usable
+    if(setsockopt(newSocket, 1, (SO_REUSEADDR | SO_REUSEPORT) , &option, sizeof(int)) < 0)
+        return -2;
+    return newSocket;
+}
+
+
+// given a client-server pair of addresses establish a connection between them
+// letting the server know who the client is by assigning the address of the client to his socket
+int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
+    int newSocket, option = 1;
+
+    // create new socket
+    if((newSocket = getReuseAddrSocket()) < 0)
         return -1;
 
     // associate this socket with the client's address
@@ -27,7 +42,7 @@ int getListeningSocket(int portNumber){
     int listeningSocket;
 
     // create socket
-    if((listeningSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    if((listeningSocket = getReuseAddrSocket()) == -1)
         return -1;
 
     // bind socket to an address

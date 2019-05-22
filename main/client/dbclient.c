@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "../include/dbclientOperations.h"
 #define ARGC 13
 
@@ -91,7 +90,7 @@ int main(int argc, char* argv[]){
 
     // reconnect to server and ask for the client list
     if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
-        perror_free("dbclient: failed to establish connection at LOG_ON stage"); 
+        perror_free("dbclient: failed to establish connection at GET_CLIENTS stage"); 
 
     if(getClients(generalSocket, &(rsrc.address), &rsrc) < 0)
         perror_free("dbclient: failed to get dbox client list from server");

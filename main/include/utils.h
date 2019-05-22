@@ -14,6 +14,7 @@ int getListeningSocket(int);
 int bindOnPort(int, uint16_t);
 int getMyIp(struct in_addr*);
 int statFile(char*);
+int getReuseAddrSocket();
 
 
 #endif
