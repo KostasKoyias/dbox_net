@@ -33,7 +33,7 @@ int bufferInit(int bufferSize, struct circularBuffer* buffer){
 
 // add an item to the end of the buffer, if not full, if "last" place is taken, it will be placed at index 0
 int bufferAdd(const struct fileInfo* file, struct circularBuffer* buffer){
-    if(file == NULL || buffer == NULL)
+    if(file == NULL || buffer == NULL || buffer->size <= 0)
         return -1;
 
     // if this is the first item ever inserted in the buffer, set start pointer at index 0
@@ -54,7 +54,7 @@ int bufferAdd(const struct fileInfo* file, struct circularBuffer* buffer){
 
 // remove an item from the circular buffer, if not empty
 int bufferRemove(struct fileInfo* file, struct circularBuffer* buffer){
-    if(file == NULL || buffer == NULL)
+    if(file == NULL || buffer == NULL || buffer->size <= 0)
         return -1;
     
     // if buffer is empty, skip
