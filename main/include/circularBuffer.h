@@ -2,11 +2,12 @@
 #define circularBuffer_H_
 #include "define.h"
 #include "clientInfo.h"
+#define SEQ_LEN 10
 
 // fileInfo holding all necessary meta-data for dbox to work 
 struct fileInfo{
     char path[PATH_SIZE];
-    int8_t version;
+    int version;
     struct clientInfo owner;
 };
 

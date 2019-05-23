@@ -84,8 +84,10 @@ int mkdirTree(char* path, mode_t mode){
         if(path[i] == '/'){
             temp = path[i];
             path[i] = '\0';
-            if(mkdir(path, mode) < 0 && errno != EEXIST)
+            if(mkdir(path, mode) < 0 && errno != EEXIST){
+                printf("mkdir %s = fail\n", path);
                 return -2;
+            }
             path[i] = temp;
         }
     }

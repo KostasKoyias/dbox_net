@@ -70,6 +70,7 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
     if(rsrc == NULL || task == NULL)
         return -1;
     
+    printf("GET_FILE_LIST");//@@@@@@@@@@@
     // make a GET_FILE_LIST request 
     if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
         return -2;
@@ -101,7 +102,7 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
 // ask another client for a certain file
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY], *localPath;
-    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0;
+    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result;
     extern char* mirror;
     struct hostent* peer;
     if(rsrc == NULL || task == NULL)
@@ -112,12 +113,19 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
         return -3;
 
-    // get local path to file which is of the form "mirrorPath/nameOfClient/pathClientSendYou"
+    // get local path to the directory made for the other client under mirror which is of the form "mirrorPath/nameOfClient/"
     if((peer = gethostbyaddr(&(task->owner.ipAddress), sizeof(task->owner.ipAddress), AF_INET)) == NULL)
         return -4;
     if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + 3)) < 0)
         return -5;
-    sprintf(localPath, "%s/%s/%s", mirror, peer->h_name, task->path);
+
+    // if it does not exist already, create it
+    sprintf(localPath, "%s/%s/", mirror, peer->h_name);
+    if((result = mkdirTree(localPath, DIR_PERMS)) < 0 && result != EEXIST){
+        free(localPath); return -6;}
+
+    // get path to the actual file, that path looks like "mirrorPath/nameOfClient/pathClientSendYou"
+    strcpy(localPath + strlen(mirror) + strlen(peer->h_name) + 1, task->path);
 
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(localPath);

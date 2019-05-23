@@ -40,6 +40,7 @@ int removeClient(struct clientInfo* clientInfo,struct clientResources* rsrc){
     // remove client from client list
     pthread_mutex_lock(&(rsrc->listMutex));
     listDelete(&(rsrc->list), clientInfo);
+    listPrint(&(rsrc->list));
     pthread_mutex_unlock(&(rsrc->listMutex));
     return 0;
 }

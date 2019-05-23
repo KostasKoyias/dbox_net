@@ -10,7 +10,7 @@ uint8_t powerOn = 1;
 char* mirror;
 
 int main(int argc, char* argv[]){
-    int i, dirName, generalSocket, bufferSize = 0;
+    int i, dirName = 0, generalSocket, bufferSize = 0;
     struct sockaddr_in otherClient = {.sin_family = AF_INET};
     char requestCode[FILE_CODE_LEN];
     struct clientInfo peerInfo;
@@ -20,8 +20,8 @@ int main(int argc, char* argv[]){
     signal(SIGINT, handler); // in case of a ^C signal
 
     // handle command line arguments, ensure they are all in the appropriate range
-    /*if(argc != ARGC)
-        usage_error(argv[0]);*/
+    if(argc != ARGC)
+        usage_error(argv[0]);
     for(i = 1; i < argc; i+=2){
         
         // get index of input directory path in the argument vector
@@ -52,11 +52,11 @@ int main(int argc, char* argv[]){
         else
             usage_error(argv[0]);
     }
-    /*if(server.sin_port <= 0 || address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
+    if(server.sin_port <= 0 || address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0 || dirName <= 0)
         error_exit("dbclient: Error, all arguments, other than 'dirname'  and 'server_address' should be positive integers\n");
 
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
-        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
+        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);
 
     // specify path for mirror directory
     if((mirror = malloc(strlen(argv[dirName]) + strlen(MIRROR) + 2)) < 0)
@@ -71,13 +71,6 @@ int main(int argc, char* argv[]){
     else
         fprintf(stdout, "dbclient: first time at dbox, input direcory under %s and mirror under %s\n", argv[dirName], mirror);
     
-    free(mirror);
-
-    return 0;
-    
-
-
-
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // get IP address of this machine
@@ -142,18 +135,20 @@ int main(int argc, char* argv[]){
             continue;
         }
         requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
-        fprintf(stdout, "dbclient: received '%s' request\n", requestCode);
+        fprintf(stdout, "dbclient: received \e[1;93m'%s'\e[0m request\n", requestCode);
 
         // if peer is not a client from the list, it must be a USER_ON/OFF request from the server
         peerInfo.ipAddress = otherClient.sin_addr.s_addr; peerInfo.portNumber = otherClient.sin_port;
         if(confirmClient(&peerInfo, &rsrc) != 1){
             if(handleServerMessage(requestCode, generalSocket, &rsrc) < 0)
-                perror("dbclient: failed to handle server message");
+                perror("dbclient: \e[31;1mfailed\e[0m to handle server message");
         }
         // else it is a request from another client
         else if(handleClientRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)
-            perror("dbclient: failed to serve another client");
-    
+            perror("dbclient: \e[31;1mfailed\e[0m to serve another client");
+        else
+            fprintf(stdout, "dbclient: \e[32;1msuccess\e[0m");
+
         // close response socket, not to run out of file descriptors
         close(generalSocket);
     }

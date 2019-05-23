@@ -23,34 +23,36 @@ int handleClientRequest(char* path, char* requestCode, int socket, struct client
 int handleGetFileList(int socket, char* dirPath){
     struct dirent* filePointer;
     struct stat statBuffer;
-    static int flag = -1;    // retains value through out recursive calls
+    static int flag = -1, inputlen;    // retains information through out recursive calls
     int pathSize, isRoot = 0;
-    char fullPath[PATH_SIZE];
+    char *fullPath, *relativePath;
     DIR* dirPointer;
     if(dirPath == NULL)
         return -1;
     
     // first call to this recursive function is responsible for letting peer know that transaction was completed
-    if(flag == -1)
+    if(flag == -1){
         isRoot = flag = 1;
+        inputlen = strlen(dirPath);
+    }
 
     // open input directory
     if((dirPointer = opendir(dirPath)) == NULL)
         return -2;
     
+    printf("SEND_FILE_LIST");//@@@@@@@@@@@
     while((filePointer = readdir(dirPointer)) != NULL){
 
-        // omit current, parent, hidden files/directories as well as too long path names
-        if((filePointer->d_name[0] == '.') ||  pathSize > PATH_SIZE-2)
+        // omit current, parent, hidden files/directories
+        if(filePointer->d_name[0] == '.')
             continue;
 
-        // get status of file under full path, relative to this client's input directory
-        if(isRoot)
-            strcpy(fullPath, filePointer->d_name);
-        else
-            sprintf(fullPath, "%s/%s", dirPath, filePointer->d_name);
+        // get status of file under full path
+        fullPath = malloc(strlen(dirPath) + strlen(filePointer->d_name) + 2);
+        sprintf(fullPath, "%s/%s", dirPath, filePointer->d_name);
         if(stat(fullPath, &statBuffer) == -1){
             closedir(dirPointer);
+            free(fullPath);
             return -3;
         }
         
@@ -61,19 +63,25 @@ int handleGetFileList(int socket, char* dirPath){
         // else if it is a regular file send it throught the socket
         else{
 
-            // first let peer know about the path size, that many bytes will later on be read
-            pathSize = strlen(fullPath);
-            if(write(socket, &pathSize, sizeof(int)) != sizeof(int) || (write(socket, fullPath, pathSize) != pathSize)){
+            // first let peer know about the path size, that many bytes will later on be read, omit too long paths, circularBuffer.path is fixed
+            relativePath = fullPath + inputlen + 1; // send a path relative to your input directory
+            pathSize = strlen(relativePath);
+            printf("SEND %s\n", relativePath);//@@@@@@@@@@@
+
+            if(pathSize >= PATH_SIZE-1 || write(socket, &pathSize, sizeof(int)) != sizeof(int) || (write(socket, relativePath, pathSize) != pathSize)){
                 closedir(dirPointer);
+                free(fullPath);
                 return -4;
             }
 
             // then send current file version
             if(write(socket, (int*)(&(statBuffer.st_mtime)), sizeof(int)) != sizeof(int)){
                 closedir(dirPointer);
+                free(fullPath);
                 return -5;
             }
         }
+        free(fullPath);
     }
 
     // inform peer that transaction is completed by sending path length equal to 0
