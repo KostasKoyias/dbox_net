@@ -40,7 +40,6 @@ int handleGetFileList(int socket, char* dirPath){
     if((dirPointer = opendir(dirPath)) == NULL)
         return -2;
     
-    printf("SEND_FILE_LIST");//@@@@@@@@@@@
     while((filePointer = readdir(dirPointer)) != NULL){
 
         // omit current, parent, hidden files/directories
@@ -101,12 +100,12 @@ int handleGetFileList(int socket, char* dirPath){
 int handleGetFile(int socket, char* directoryPath){
     char fullPath[PATH_SIZE], relativePath[PATH_SIZE], responseCode[FILE_CODE_LEN], buffer[SOCKET_CAPACITY];
     struct stat statBuffer;
-    int version, fd, bytes;
+    int version, fd, bytes, pathSize;
     if(directoryPath == NULL)
         return -1;
     
     // get relative file path from peer
-    if(read(socket, relativePath, PATH_SIZE) != PATH_SIZE)
+    if((read(socket, &pathSize, sizeof(pathSize)) != sizeof(pathSize)) || (read(socket, relativePath, pathSize) != pathSize))
         return -2;
 
     // append to directory path to get full path 
@@ -114,7 +113,9 @@ int handleGetFile(int socket, char* directoryPath){
 
     // get version of file, return FILE_NOT_FOUND if it does not exists
     if(stat(fullPath, &statBuffer) == -1){
+        printf("%s not found\n", fullPath);
         strcpy(responseCode, "FILE_NOT_FOUND");
+        perror("error:");
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
             return -3;
         return 0;

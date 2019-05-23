@@ -102,7 +102,7 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
 // ask another client for a certain file
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY], *localPath;
-    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result;
+    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result, pathSize;
     extern char* mirror;
     struct hostent* peer;
     if(rsrc == NULL || task == NULL)
@@ -125,23 +125,32 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
         free(localPath); return -6;}
 
     // get path to the actual file, that path looks like "mirrorPath/nameOfClient/pathClientSendYou"
-    strcpy(localPath + strlen(mirror) + strlen(peer->h_name) + 1, task->path);
+    strcpy(localPath + strlen(localPath) + 1, task->path);
 
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(localPath);
 
     // specify file path on client's file system and version on this system
-    if(write(socket, &(task->path), PATH_SIZE) < 0 || write(socket, &version, sizeof(int)) != sizeof(int)){
+    pathSize = strlen(task->path);
+    if(write(socket, &pathSize, sizeof(pathSize)) != sizeof(pathSize)){
         free(localPath); return -6;}
+
+
+    if(write(socket, &(task->path), pathSize) != pathSize || write(socket, &version, sizeof(int)) != sizeof(int)){
+        free(localPath); return -7;}
 
     // get response
     if(read(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN){
-        free(localPath); return -7;}
+        free(localPath); return -8;}
 
     // if file is already up to date, do nothing
     if(strcmp(codeBuffer, "FILE_UP_TO_DATE") == 0){
         free(localPath); return 0;}
-    
+
+    // else if file was not found, return immediately
+    else if(strcmp(codeBuffer, "FILE_NOT_FOUND") == 0)
+        return 0;
+            
     // else get file copy
     else if(strcmp(codeBuffer, "FILE_SIZE") == 0){
         fileSize = atoi(codeBuffer);
@@ -154,14 +163,14 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
             
             // get file in SOCKET_CAPACITY slices
             if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0){
-                close(localFile); free(localPath); return -8;}
+                close(localFile); free(localPath); return -9;}
 
             // put each slice in the local file
             if(write(localFile, fileSlice, sliceSize) < 0){
-                close(localFile); free(localPath); return -9;}
+                close(localFile); free(localPath); return -10;}
         }
         if(sizeRead != fileSize)
-            rv = -10;
+            rv = -11;
 
         close(localFile);
         free(localPath);
@@ -171,5 +180,5 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
 
     // else response code was incorrect
     free(localPath);
-    return -11;
+    return -12;
 }

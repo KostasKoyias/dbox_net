@@ -85,7 +85,8 @@ int mkdirTree(char* path, mode_t mode){
             temp = path[i];
             path[i] = '\0';
             if(mkdir(path, mode) < 0 && errno != EEXIST){
-                printf("mkdir %s = fail\n", path);
+                printf("mkdir %s = failI\n", path);
+                perror("err: ");
                 return -2;
             }
             path[i] = temp;
@@ -96,6 +97,12 @@ int mkdirTree(char* path, mode_t mode){
     if(mkdir(path, mode) < 0){
         if(errno == EEXIST)
             return EEXIST;
+        else{
+            printf("mkdir %s = fail lastII\n", path);
+            perror("err: ");
+
+            return -3;
+        }
     }
     return 0;
 }
