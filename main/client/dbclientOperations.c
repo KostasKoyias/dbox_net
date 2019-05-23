@@ -9,6 +9,7 @@ int addClient(struct fileInfo* fileInfo, struct clientResources* rsrc){
     // add client to client list
     pthread_mutex_lock(&(rsrc->listMutex));
     listInsert(&(rsrc->list), &(fileInfo->owner));
+    listPrint(&(rsrc->list));
     pthread_mutex_unlock(&(rsrc->listMutex));
     return addTask(fileInfo, rsrc);
 }
@@ -25,6 +26,7 @@ int addTask(struct fileInfo* fileInfo, struct clientResources* rsrc){
         pthread_cond_wait(&(rsrc->fullBuffer), &(rsrc->bufferMutex));
     }
     bufferAdd(fileInfo, &(rsrc->buffer));
+    bufferPrint(&(rsrc->buffer));
 
     pthread_cond_signal(&(rsrc->emptyBuffer));  // signal a pending worker thread
     pthread_mutex_unlock(&(rsrc->bufferMutex));

@@ -23,8 +23,8 @@ int main(int argc, char* argv[]){
     signal(SIGINT, handler); // in case of a ^C signal
 
     // handle command line arguments, ensure they are all in the appropriate range
-    //if(argc != ARGC)
-    //    usage_error(argv[0]);
+    if(argc != ARGC)
+        usage_error(argv[0]);
     for(i = 1; i < argc; i+=2){
         
         // get index of input directory path in the argument vector
@@ -55,11 +55,11 @@ int main(int argc, char* argv[]){
         else
             usage_error(argv[0]);
     }
-    /*if(server.sin_port <= 0 || server.sin_addr.s_addr <= 0 || rsrc.address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
-        error_exit("dbclient: Error, all arguments, other than 'dirname' should be positive integers\n");
+    if(server.sin_port <= 0 || rsrc.address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
+        error_exit("dbclient: Error, all arguments, other than 'dirname'  and 'server_address' should be positive integers\n");
 
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
-        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
+        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);
 
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]){
 
     // accept connections until an interrupt signal is caught
     while(1){
-        fprintf(stdout, "dbclient: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
+        fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
 
         // accept TCP connection
         if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1){
@@ -133,8 +133,6 @@ int main(int argc, char* argv[]){
         if(confirmClient(&peerInfo, &rsrc) != 1){
             if(handleServerMessage(requestCode, generalSocket, &rsrc) < 0)
                 perror("dbclient: failed to handle server message");
-            else 
-                listPrint(&(rsrc.list));
         }
         // else it is a request from another client
         else if(handleClientRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)

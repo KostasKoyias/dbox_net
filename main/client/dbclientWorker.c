@@ -9,19 +9,19 @@ void* dbclientWorker(void* arg){
     if(arg == NULL)
         return NULL;
     rsrc = (struct clientResources*)arg;
+    fprintf(stdout, "%.4ld: start\n", pthread_self());
 
     while(1){
 
         // block until buffer is non-empty, then remove a task from circularBuffer
         pthread_mutex_lock(&(rsrc->bufferMutex));
-        while(bufferIsEmpty(&(rsrc->buffer))){
+        fprintf(stdout, "%.4ld: block, isEmpty? %d\n", pthread_self(), bufferIsEmpty(&(rsrc->buffer)));
+        while(bufferIsEmpty(&(rsrc->buffer)))
             pthread_cond_wait(&(rsrc->emptyBuffer), &(rsrc->bufferMutex));
-            pthread_mutex_lock(&(rsrc->bufferMutex));        
-        }
         bufferRemove(&task, &(rsrc->buffer));
+        fprintf(stdout, "%.4ld: pop task\n", pthread_self());
         pthread_cond_signal(&(rsrc->fullBuffer));   // signal a pending thread
         pthread_mutex_unlock(&(rsrc->bufferMutex));
-
 
         // ensure that the client is really a member of the client list
         if(confirmClient(&(task.owner), rsrc) != 1)    

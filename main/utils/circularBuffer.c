@@ -97,8 +97,11 @@ int bufferPrint(struct circularBuffer* buffer){
     for(i = 0; i < buffer->size ; i = i + 1)
         if(buffer->files[i].version == -2)
             fprintf(stdout, " | (-, -) | ");
-        else
+        else if(buffer->files[i].version == -1)
             fprintf(stdout, " | (%u, %hu) | ", buffer->files[i].owner.ipAddress, buffer->files[i].owner.portNumber);
+        else
+            fprintf(stdout, " | (%u, %hu, %d, %s) | ",\
+            buffer->files[i].owner.ipAddress, buffer->files[i].owner.portNumber, buffer->files[i].version, buffer->files[i].path);
     fputc('\n', stdout);
     return 0;
 }
