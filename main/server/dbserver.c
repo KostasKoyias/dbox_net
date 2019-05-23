@@ -1,6 +1,5 @@
-#include <stdio.h>
 #include "../include/utils.h"
-#include "../include/dbserverOperations.h"
+#include "../include/dbserver.h"
 
 struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL};
 void handler(int);

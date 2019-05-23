@@ -1,16 +1,13 @@
-#include "../include/dbclientOperations.h"
+#include "../include/dbclient.h"
 #define ARGC 13
 
 // in case of an interrupt signal, dbclient shall exit safely through the handler, therefore variables used there are declared globally
-void handler(int);
-void free_rsrc(int);
-void usage_error(const char*);
-void perror_free(char*);
 pthread_t* threadVector;
 int listeningSocket, workerThreads = 0;
-struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}, .address = {.sin_family = AF_INET}};
-struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0};
+struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
+struct sockaddr_in address = {.sin_family = AF_INET}, server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0};
 uint8_t powerOn = 1;
+char* mirror;
 
 int main(int argc, char* argv[]){
     int i, dirName, generalSocket, bufferSize = 0;
@@ -24,8 +21,8 @@ int main(int argc, char* argv[]){
     signal(SIGINT, handler); // in case of a ^C signal
 
     // handle command line arguments, ensure they are all in the appropriate range
-    if(argc != ARGC)
-        usage_error(argv[0]);
+    /*if(argc != ARGC)
+        usage_error(argv[0]);*/
     for(i = 1; i < argc; i+=2){
         
         // get index of input directory path in the argument vector
@@ -34,7 +31,7 @@ int main(int argc, char* argv[]){
         
         // convert port number from string to network byte order
         else if(strcmp(argv[i], "-p") == 0)
-            rsrc.address.sin_port = htons((uint16_t)atoi(argv[i+1]));
+            address.sin_port = htons((uint16_t)atoi(argv[i+1]));
 
         // get number of threads working for this client
         else if(strcmp(argv[i], "-w") == 0)
@@ -51,31 +48,50 @@ int main(int argc, char* argv[]){
         // convert server's IP address from a string in dotted format to binary
         else if(strcmp(argv[i], "-sip") == 0){
             if(inet_aton(argv[i+1], &server.sin_addr) < 0)
-                perror_exit("dbclient: server ip not in presentation format");
+                perror_free("dbclient: server ip not in presentation format");
         }
         else
             usage_error(argv[0]);
     }
-    if(server.sin_port <= 0 || rsrc.address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
+    /*if(server.sin_port <= 0 || address.sin_port <= 0 || workerThreads <= 0 || bufferSize <= 0)
         error_exit("dbclient: Error, all arguments, other than 'dirname'  and 'server_address' should be positive integers\n");
 
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
-        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);
+        error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
+
+    // specify path for mirror directory
+    if((mirror = malloc(strlen(argv[dirName]) + strlen(MIRROR) + 2)) < 0)
+        perror_exit("dbclient: failed to allocate space in order to specify the path of mirror directory");
+    setPath(mirror, argv[dirName], MIRROR);
+
+    // create mirror directory, if it does not exist and announce presence
+    if((i = mkdirTree(mirror, DIR_PERMS)) < 0)
+        perror_free("dbclient: failed to create mirror directory at login");
+    else if(i == EEXIST)
+        fprintf(stdout, "dbclient: re-logged in dbox, input direcory under %s and mirror under %s\n", argv[dirName], mirror);
+    else
+        fprintf(stdout, "dbclient: first time at dbox, input direcory under %s and mirror under %s\n", argv[dirName], mirror);
+    
+    free(mirror);
+
+    return 0;
+    
+
 
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // get IP address of this machine
-    if(getMyIp(&(rsrc.address.sin_addr)) < 0)
-        perror_exit("dbclient: failed to get IP address of this client");
+    if(getMyIp(&(address.sin_addr)) < 0)
+        perror_free("dbclient: failed to get IP address of this client");
 
     // connect to server to issue a log_on request
     if((generalSocket = establishConnection(NULL, &server)) < 0)
-        perror_exit("dbclient: failed establish connection at LOG_ON stage");
+        perror_free("dbclient: failed establish connection at LOG_ON stage");
 
     // inform server for your arrival issuing a LOG_ON request
-    if(informServer(LOG_ON, generalSocket, &(rsrc.address)) < 0)
-        perror_exit("dbclient: failed to inform server on arrival");
+    if(informServer(LOG_ON, generalSocket, &(address)) < 0)
+        perror_free("dbclient: failed to inform server on arrival");
     close(generalSocket);
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ THREADS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -99,7 +115,7 @@ int main(int argc, char* argv[]){
     if((generalSocket = establishConnection(NULL, &server)) < 0)
         perror_free("dbclient: failed to establish connection at GET_CLIENTS stage"); 
 
-    if(getClients(generalSocket, &(rsrc.address), &rsrc) < 0)
+    if(getClients(generalSocket, &(address), &rsrc) < 0)
         perror_free("dbclient: failed to get dbox client list from server");
     close(generalSocket);
     bufferPrint(&(rsrc.buffer));
@@ -108,12 +124,12 @@ int main(int argc, char* argv[]){
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(rsrc.address.sin_addr.s_addr, rsrc.address.sin_port)) < 0)
+    if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
         perror_free("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     while(1){
-        fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", rsrc.address.sin_port, htons(rsrc.address.sin_port));
+        fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", address.sin_port, htons(address.sin_port));
 
         // accept TCP connection
         if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1){
@@ -147,12 +163,6 @@ int main(int argc, char* argv[]){
     return 0; 
 }
 
-// print a usage message and exit with code: EXIT_FAILURE
-void usage_error(const char *path){
-    fprintf(stderr, "Usage: %s –d dirName –p portNum –w workerThreads –b bufferSize –sp serverPort –sip serverIP\n", path);
-    exit(EXIT_FAILURE);
-}
-
 // in case of an interrupt signal
 void handler(int sig){
     int i, lastSocket;
@@ -172,7 +182,7 @@ void handler(int sig){
     if((lastSocket = establishConnection(NULL, &server)) < 0)
         perror("dbclient: failed to establish a final connection before exiting");
 
-    else if(informServer(LOG_OFF, lastSocket, &(rsrc.address)) < 0){
+    else if(informServer(LOG_OFF, lastSocket, &(address)) < 0){
         perror("dbclient: failed to inform server about LOG_OFF before exiting");
         close(lastSocket);
     }
@@ -186,9 +196,17 @@ void free_rsrc(int exitCode){
     close(listeningSocket);
     rsrcFree(&rsrc);
     free(threadVector);   
+    free(mirror);
     exit(exitCode);
 }
 
+// print a usage message and exit with code: EXIT_FAILURE
+void usage_error(const char *path){
+    fprintf(stderr, "Usage: %s –d dirName –p portNum –w workerThreads –b bufferSize –sp serverPort –sip serverIP\n", path);
+    exit(EXIT_FAILURE);
+}
+
+// display last error and exit after letting go of all resources used
 void perror_free(char* msg){
     perror(msg);
     free_rsrc(EXIT_FAILURE);

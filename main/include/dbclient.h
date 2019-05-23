@@ -10,6 +10,7 @@
 #define LOG_OFF 1
 #define USER_ON 0
 #define USER_OFF 1
+#define MIRROR "mirror"
 
 struct clientResources{
     pthread_mutex_t bufferMutex;
@@ -18,7 +19,6 @@ struct clientResources{
     pthread_cond_t emptyBuffer;
     pthread_mutex_t listMutex;
     struct G_list list;
-    struct sockaddr_in address;
 };
 
 //initialization
@@ -45,4 +45,10 @@ int removeClient(struct clientInfo*, struct clientResources*);
 int rsrcInit(struct clientResources*, int);
 int rsrcFree(struct clientResources*);
 int confirmClient(struct clientInfo*, struct clientResources*);
+
+//utilities for main thread
+void handler(int);
+void free_rsrc(int);
+void usage_error(const char*);
+void perror_free(char*);
 #endif

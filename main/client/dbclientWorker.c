@@ -1,23 +1,24 @@
-#include "../include/dbclientOperations.h"
+#include "../include/dbclient.h"
 
 void* dbclientWorker(void* arg){
     struct clientResources* rsrc;
     struct fileInfo task;
     struct sockaddr_in peer = {.sin_family = AF_INET};
+    extern struct sockaddr_in address;
     int sock, rv;
     extern uint8_t powerOn;
 
     if(arg == NULL)
         return NULL;
     rsrc = (struct clientResources*)arg;
-    fprintf(stdout, " thread %ld: start\n", pthread_self());
+    fprintf(stdout, "thread %ld: start\n", pthread_self());
 
     // while client is logged in
     while(powerOn){
 
         // block until buffer is non-empty, then remove a task from circularBuffer
         pthread_mutex_lock(&(rsrc->bufferMutex));
-        fprintf(stdout, "%.4ld: block, isEmpty? %d\n", pthread_self(), bufferIsEmpty(&(rsrc->buffer)));
+        fprintf(stdout, "thread %ld: block, isEmpty? %d\n", pthread_self(), bufferIsEmpty(&(rsrc->buffer)));
         while(bufferIsEmpty(&(rsrc->buffer))){
 
             // atomically unlock buffer and self-block until condition holds, then lock again as soon as possible
@@ -41,7 +42,7 @@ void* dbclientWorker(void* arg){
         // create socket, bind it to an address and establish a connection with peer
         peer.sin_addr.s_addr = task.owner.ipAddress;
         peer.sin_port = task.owner.portNumber;
-        if((sock = establishConnection(&(rsrc->address), &peer)) < 0){
+        if((sock = establishConnection(&address, &peer)) < 0){
             perror("dbclient: working thread failed to establish connection with peer");
             continue;
         }
@@ -96,6 +97,7 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY];
     int version, fileSize, sizeRead, sliceSize, localFile;
+    extern char* mirror;
     if(rsrc == NULL || task == NULL)
         return -1;
 
@@ -104,7 +106,7 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
         return -3;
 
-    // get current version of file, if it exists on this system, else it will be set to -1, so it is always OUT_DATED  
+    // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(task->path);
 
     // specify file path on client's file system and version on this system

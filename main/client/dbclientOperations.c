@@ -1,4 +1,4 @@
-#include "../include/dbclientOperations.h"
+#include "../include/dbclient.h"
 #include "../include/clientInfo.h"
 
 // add a client to the list safely

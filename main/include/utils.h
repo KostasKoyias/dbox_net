@@ -15,6 +15,10 @@ int bindOnPort(int, uint16_t);
 int getMyIp(struct in_addr*);
 int statFile(char*);
 int getReuseAddrSocket(struct sockaddr_in*);
+int setPath(char*, const char*, const char*);
+int lastIndexOf(char, const char*);
+int mkdirTree(char*, mode_t);
+
 
 
 #endif

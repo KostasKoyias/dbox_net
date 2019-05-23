@@ -21,7 +21,7 @@
 #include <dirent.h>     //readdir
  #include <inttypes.h>
 //#include <sys/wait.h>
-//#include <errno.h>
+#include <errno.h>
 
 #define HOST_SIZE 256
 #define PATH_SIZE 512
@@ -31,4 +31,5 @@
 #define SOCKET_CAPACITY 1024
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #define FILE_PERMS 0644
+#define DIR_PERMS 0644
 #endif
