@@ -133,37 +133,33 @@ int handleGetFile(int socket, char* directoryPath){
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
             return -5;
 
-        // send file version
-        if(write(socket, (int*)(&(statBuffer.st_mtime)), sizeof(int)) != sizeof(int))
-            return -6;  
-
         // send file size
         if(write(socket, &(statBuffer.st_size), sizeof(off_t)) != sizeof(off_t))
-            return -7;
+            return -6;
 
         // send file content by first opening file
         if((fd = open(fullPath, FILE_PERMS)) < 0)
-            return -8;
+            return -7;
 
         // then put SOCKET_CAPACITY bytes at a time in the socket 
         while((bytes = read(fd, buffer, SOCKET_CAPACITY)) == SOCKET_CAPACITY){
             if(write(socket, buffer, SOCKET_CAPACITY) != SOCKET_CAPACITY)
-                return -9;
+                return -8;
         }
 
         if(bytes == -1)
-            return -10;
+            return -9;
 
         // send remaining bytes
         if(write(socket, buffer, bytes) != bytes)
-            return -11;
+            return -10;
         return 1;
     }
     // else send an appropriate message
     else{
-        strcpy(responseCode, "FILE_OUT_OF_DATE");
+        strcpy(responseCode, "FILE_UP_TO_DATE");
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
-            return -10;
+            return -11;
         return 2;
     }
 }

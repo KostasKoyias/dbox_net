@@ -89,7 +89,7 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
         // get actual path, ensure it is null-terminated, then get file version
         if((read(socket, &(task->path), len) != len) || (read(socket, &(task->version), sizeof(int)) != sizeof(int)))
             return -4;    
-        task->path[len-1] = '\0';
+        task->path[len] = '\0';
 
         // add a GET_FILE task to the circularBuffer for another worker to complete
         if(addTask(task, rsrc) < 0)
@@ -102,9 +102,10 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
 // ask another client for a certain file
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY], *localPath;
-    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result, pathSize;
+    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result, pathSize, index;
     extern char* mirror;
     struct hostent* peer;
+    char temp;
     if(rsrc == NULL || task == NULL)
         return -1;
 
@@ -125,7 +126,7 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
         free(localPath); return -6;}
 
     // get path to the actual file, that path looks like "mirrorPath/nameOfClient/pathClientSendYou"
-    strcpy(localPath + strlen(localPath) + 1, task->path);
+    strcat(localPath, task->path);
 
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(localPath);
@@ -153,24 +154,38 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
             
     // else get file copy
     else if(strcmp(codeBuffer, "FILE_SIZE") == 0){
-        fileSize = atoi(codeBuffer);
 
-        // create or truncate file copy of this system
-        localFile = open(localPath, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS);
+        // get size of file
+        if(read(socket, &fileSize, sizeof(fileSize)) != sizeof(fileSize)){
+            free(localPath); return -9;}
+
+        // create or truncate file copy of this system, make parent directories as needed
+        index = lastIndexOf('/', localPath);
+        temp = localPath[index];
+        localPath[index] = '\0';
+        if(mkdirTree(localPath, DIR_PERMS) < 0){
+            free(localPath); return -10;
+        }
+        localPath[index] = temp;
+        if((localFile = open(localPath, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS)) < 0){
+            printf("%s\n", localPath);
+            perror("open");
+            return -11;
+        }
 
         // until the whole file is copied
         for(sizeRead = 0; sizeRead < fileSize; sizeRead += sliceSize){
             
             // get file in SOCKET_CAPACITY slices
             if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0){
-                close(localFile); free(localPath); return -9;}
+                close(localFile); free(localPath); return -12;}
 
             // put each slice in the local file
             if(write(localFile, fileSlice, sliceSize) < 0){
-                close(localFile); free(localPath); return -10;}
+                close(localFile); free(localPath); return -13;}
         }
         if(sizeRead != fileSize)
-            rv = -11;
+            rv = -13;
 
         close(localFile);
         free(localPath);
