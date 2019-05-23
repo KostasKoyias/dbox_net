@@ -108,9 +108,7 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
         // inform client specifying the user that entered/left the system
         if(write(generalSocket, event, FILE_CODE_LEN) != FILE_CODE_LEN) 
             continue;
-        else if(write(generalSocket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
-            continue;
-        else if(write(generalSocket, &(info->portNumber), sizeof(info->portNumber)) != sizeof(info->portNumber))
+        else if(sendClientInfo(generalSocket, info) < 0)
             continue;
         informed++;
     }

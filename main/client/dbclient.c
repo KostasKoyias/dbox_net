@@ -10,6 +10,7 @@ pthread_t* threadVector;
 int listeningSocket, workerThreads = 0;
 struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}, .address = {.sin_family = AF_INET}};
 struct sockaddr_in server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0};
+uint8_t powerOn = 1;
 
 int main(int argc, char* argv[]){
     int i, dirName, generalSocket, bufferSize = 0;
@@ -155,6 +156,13 @@ void usage_error(const char *path){
 // in case of an interrupt signal
 void handler(int sig){
     int i, lastSocket;
+
+    // inform workers of shut-down
+    powerOn = 0;
+    if(pthread_cond_broadcast(&(rsrc.emptyBuffer)) != 0){
+        perror("dbclient: failed to inform workers, leaving without them\n"); 
+        free_rsrc(EXIT_FAILURE);
+    }
 
     // let main thread join workers
     for(i = 0; i < workerThreads; i++)

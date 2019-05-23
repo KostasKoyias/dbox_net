@@ -5,21 +5,32 @@ void* dbclientWorker(void* arg){
     struct fileInfo task;
     struct sockaddr_in peer = {.sin_family = AF_INET};
     int sock, rv;
+    extern uint8_t powerOn;
 
     if(arg == NULL)
         return NULL;
     rsrc = (struct clientResources*)arg;
-    fprintf(stdout, "%.4ld: start\n", pthread_self());
+    fprintf(stdout, " thread %ld: start\n", pthread_self());
 
-    while(1){
+    // while client is logged in
+    while(powerOn){
 
         // block until buffer is non-empty, then remove a task from circularBuffer
         pthread_mutex_lock(&(rsrc->bufferMutex));
         fprintf(stdout, "%.4ld: block, isEmpty? %d\n", pthread_self(), bufferIsEmpty(&(rsrc->buffer)));
-        while(bufferIsEmpty(&(rsrc->buffer)))
-            pthread_cond_wait(&(rsrc->emptyBuffer), &(rsrc->bufferMutex));
+        while(bufferIsEmpty(&(rsrc->buffer))){
+
+            // atomically unlock buffer and self-block until condition holds, then lock again as soon as possible
+            pthread_cond_wait(&(rsrc->emptyBuffer), &(rsrc->bufferMutex)); 
+            
+            // check whether this thread was signaled in order to log out
+            if(!powerOn){
+                pthread_mutex_unlock(&(rsrc->bufferMutex));
+                goto powerOff;
+            }
+        }
         bufferRemove(&task, &(rsrc->buffer));
-        fprintf(stdout, "%.4ld: pop task\n", pthread_self());
+        fprintf(stdout, "thread %ld: pop task\n", pthread_self());
         pthread_cond_signal(&(rsrc->fullBuffer));   // signal a pending thread
         pthread_mutex_unlock(&(rsrc->bufferMutex));
 
@@ -43,7 +54,10 @@ void* dbclientWorker(void* arg){
         if(rv < 0)
             perror("dbclient: working thread failed to complete task");
     }
-    return NULL;
+
+powerOff:
+    fprintf(stdout, "thread %ld: got power off!\n", pthread_self());
+    pthread_exit(NULL);
 }
 
 int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task){

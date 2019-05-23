@@ -21,10 +21,8 @@ int addTask(struct fileInfo* fileInfo, struct clientResources* rsrc){
 
     // add a GET_FILE or GET_FILE_LIST task to the circular buffer for a working thread to ask for all files of the new client 
     pthread_mutex_lock(&(rsrc->bufferMutex));
-    while(bufferIsFull(&(rsrc->buffer))){
-        pthread_mutex_unlock(&(rsrc->bufferMutex));
+    while(bufferIsFull(&(rsrc->buffer)))
         pthread_cond_wait(&(rsrc->fullBuffer), &(rsrc->bufferMutex));
-    }
     bufferAdd(fileInfo, &(rsrc->buffer));
     bufferPrint(&(rsrc->buffer));
 

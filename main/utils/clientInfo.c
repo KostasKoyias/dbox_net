@@ -1,6 +1,6 @@
 #include "../include/clientInfo.h"
 
-/* given two clients, return the address of the 1st one, if identical, else NULL*/
+// given two clients, return the address of the 1st one, if identical, else NULL
 void* clientCompare(void* clientA, const void*clientB){
     struct clientInfo *clientInfoA, *clientInfoB;
     if(clientA == NULL || clientB == NULL)
@@ -10,7 +10,7 @@ void* clientCompare(void* clientA, const void*clientB){
     return (clientInfoA->ipAddress == clientInfoB->ipAddress && clientInfoA->portNumber == clientInfoB->portNumber) ? clientA : NULL;
 }
 
-/* assign to/update a clientInfo node */
+// assign to/update a clientInfo node 
 int clientAssign(void *clientA, const void *clientB){
     struct clientInfo *clientInfoA, *clientInfoB;
 
@@ -23,7 +23,7 @@ int clientAssign(void *clientA, const void *clientB){
     return 0;
 }
 
-/* given a client's info display an (ip, port) pair in stdout */
+// given a client's info display an (ip, port) pair in stdout 
 int clientPrint(void* client){
     if(client == NULL)
         return -1;
@@ -31,15 +31,28 @@ int clientPrint(void* client){
     return 0;
 }
 
-/* get client's info from a socket */
+// get client's info from a socket 
 int getClientInfo(int socket, struct clientInfo* info){
     if(socket < 0 || info == NULL)
         return -1;
 
     // get ip address and port of the client connected 
-    if(read(socket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
+    else if(read(socket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
         return -2;
     else if(read(socket, &(info->portNumber), sizeof(info->portNumber)) != sizeof(info->portNumber))
         return -3;
     return 0;
+}
+
+// send client's info through a socket
+int sendClientInfo(int socket, struct clientInfo *info){
+        if(socket < 0 || info == NULL)
+            return -1;
+
+        // send ip address and port of a connected client
+        else if(write(socket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
+            return -2;
+        else if(write(socket, &(info->portNumber), sizeof(info->portNumber)) != sizeof(info->portNumber))
+            return -3;
+        return 0;
 }

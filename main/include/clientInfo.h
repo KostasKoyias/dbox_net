@@ -13,5 +13,6 @@ void* clientCompare(void*, const void*);
 int clientAssign(void*, const void*);
 int clientPrint(void*);
 int getClientInfo(int, struct clientInfo*);
+int setClientInfo(int, struct clientInfo*);
 
 #endif
