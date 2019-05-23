@@ -92,13 +92,13 @@ int bufferPrint(struct circularBuffer* buffer){
     int i;
     if(buffer == NULL)
         return -1;
-
+        
+    fprintf(stdout, "start:\t%d\nend:\t%d\n", buffer->start, buffer->end);
     for(i = 0; i < buffer->size ; i = i + 1)
-        fprintf(stdout, "start:\t%d\nend:\t%d\n", buffer->start, buffer->end);
         if(buffer->files[i].version == -2)
-            fprintf(stdout, " | (-, -, %d) | ", buffer->files[i].version);
+            fprintf(stdout, " | (-, -) | ");
         else
-            fprintf(stdout, " | (%u, %hu, %d) | ", buffer->files[i].owner.ipAddress, buffer->files[i].owner.portNumber, buffer->files[i].version);
+            fprintf(stdout, " | (%u, %hu) | ", buffer->files[i].owner.ipAddress, buffer->files[i].owner.portNumber);
     fputc('\n', stdout);
     return 0;
 }

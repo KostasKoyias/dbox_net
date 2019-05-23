@@ -61,20 +61,23 @@ int main(int argc, char* argv[]){
     if((stat(argv[dirName], &statBuffer) == -1) || (!S_ISDIR(statBuffer.st_mode)))
         error_exit("dbclient: Error, input path \"%s\" does not refer to an actual directory under this file system\n", argv[dirName]);*/
 
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     // get IP address of this machine
     if(getMyIp(&(rsrc.address.sin_addr)) < 0)
         perror_exit("dbclient: failed to get IP address of this client");
 
-    // create and bind socket to an address, then establish a connection with the server
-    if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
-        perror_exit("dbclient: failed to establish connection at LOG_ON stage");
-    
+    // connect to server to issue a log_on request
+    if((generalSocket = establishConnection(NULL, &server)) < 0)
+        perror_exit("dbclient: failed establish connection at LOG_ON stage");
+
     // inform server for your arrival issuing a LOG_ON request
     if(informServer(LOG_ON, generalSocket, &(rsrc.address)) < 0)
-        perror_exit("dbclient: failed inform server on arrival");
-
-    // close connetcion
+        perror_exit("dbclient: failed to inform server on arrival");
     close(generalSocket);
+
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ THREADS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // initialize circularBuffer, mutexes and conditions
     rsrcInit(&rsrc, bufferSize);
@@ -88,8 +91,11 @@ int main(int argc, char* argv[]){
             perror_free("dbclient: failed to create worker thread");
     }
 
-    // reconnect to server and ask for the client list
-    if((generalSocket = establishConnection(&(rsrc.address), &server)) < 0) 
+
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ GET_CLIENTS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    // connect to server to issue a log_on request
+    if((generalSocket = establishConnection(NULL, &server)) < 0)
         perror_free("dbclient: failed to establish connection at GET_CLIENTS stage"); 
 
     if(getClients(generalSocket, &(rsrc.address), &rsrc) < 0)
@@ -98,8 +104,10 @@ int main(int argc, char* argv[]){
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
+
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(rsrc.address.sin_port)) < 0)
+    if((listeningSocket = getListeningSocket(rsrc.address.sin_addr.s_addr, rsrc.address.sin_port)) < 0)
         perror_free("dbclient: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
@@ -112,33 +120,30 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        // if peer is neither the server nor a client from the list, close connection immediately
-        peerInfo.ipAddress = otherClient.sin_addr.s_addr; peerInfo.portNumber = otherClient.sin_port;
-        if((server.sin_addr.s_addr != otherClient.sin_addr.s_addr || server.sin_port != otherClient.sin_port) && confirmClient(&peerInfo, &rsrc) != 1){
-            close(generalSocket);
-            continue;
-        }
-
-        // **************************************    DEPRECATED   *******************************************************
-        printf("Accepted connection from: %d\t%d\n", otherClient.sin_addr.s_addr, otherClient.sin_port);
-        // **************************************************************************************************************
-
-        // get code of request
+        // get code of request 
         if(read(generalSocket, requestCode, FILE_CODE_LEN) != FILE_CODE_LEN){
             perror("dbclient: failed to get request from client");
             continue;
         }
+        requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
+        fprintf(stdout, "dbclient: received '%s' request\n", requestCode);
 
-        // ensure request string is terminated
-        requestCode[FILE_CODE_LEN-1] = '\0';
-        fprintf(stdout, "request %s from %u %hu\n", requestCode, otherClient.sin_addr.s_addr, otherClient.sin_port);
-
-        if(handleRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)
-            perror("dbclient: failed to handle request");
+        // if peer is not a client from the list, it must be a USER_ON/OFF request from the server
+        peerInfo.ipAddress = otherClient.sin_addr.s_addr; peerInfo.portNumber = otherClient.sin_port;
+        if(confirmClient(&peerInfo, &rsrc) != 1){
+            if(handleServerMessage(requestCode, generalSocket, &rsrc) < 0)
+                perror("dbclient: failed to handle server message");
+            else 
+                listPrint(&(rsrc.list));
+        }
+        // else it is a request from another client
+        else if(handleClientRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)
+            perror("dbclient: failed to serve another client");
     
         // close response socket, not to run out of file descriptors
         close(generalSocket);
     }
+    getchar();
     handler(0);
     return 0; 
 }
@@ -158,13 +163,15 @@ void handler(int sig){
         pthread_join(threadVector[i], NULL);
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
-    if((lastSocket = establishConnection(&(rsrc.address), &server)) < 0)
+    if((lastSocket = establishConnection(NULL, &server)) < 0)
         perror("dbclient: failed to establish a final connection before exiting");
 
     else if(informServer(LOG_OFF, lastSocket, &(rsrc.address)) < 0){
-        perror("dbclient: failed to inform server before exiting");
+        perror("dbclient: failed to inform server about LOG_OFF before exiting");
         close(lastSocket);
     }
+    else
+        close(lastSocket);
     free_rsrc(EXIT_SUCCESS);
 }
 

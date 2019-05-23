@@ -4,33 +4,32 @@
 
 struct G_list clientlist = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL};
 void handler(int);
-uint16_t portNumber = 0;
 
 int main(int argc, char* argv[]){
     int listeningSocket, responseSocket;
+    uint32_t port;
     char requestCode[CODE_LEN];
-    struct sockaddr_in clientAddress, peer;
-    socklen_t clientlen = sizeof(struct sockaddr_in), peerlen = sizeof(struct sockaddr_in);
+    struct sockaddr_in client;
+    socklen_t clientlen = sizeof(struct sockaddr_in);
 
     // declare handler in case of an interrupt signal received
     signal(SIGINT, handler);
+    signal(SIGPIPE, SIG_IGN);
 
     // ensure usage is correct
-    if(argc != 3 || strcmp(argv[1], "-p") != 0 || (portNumber = (uint16_t)atoi(argv[2])) <= 0)
+    if(argc != 3 || strcmp(argv[1], "-p") != 0 || (port = (uint16_t)atoi(argv[2])) <= 0)
         error_exit("Usage: %s -p port\nNote: port number should be positive\n", argv[0]);
     
-    printf("%d\n", portNumber);
-
     // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(portNumber)) < 0)
+    if((listeningSocket = getListeningSocket(0, port)) < 0)
         perror_exit("dbserver: failed to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     while(1){
-        fprintf(stdout, "\ndbserver: handling requests on port %hu(h)/%hu(n)\n", portNumber, htons(portNumber));
+        fprintf(stdout, "\ndbserver: handling requests on port %hu(h)/%hu(n)\n", port, htons(port));
 
         // accept TCP connection
-        if((responseSocket = accept(listeningSocket, (struct sockaddr*)&clientAddress, &clientlen)) == -1)
+        if((responseSocket = accept(listeningSocket, (struct sockaddr*)&client, &clientlen)) == -1)
             perror_exit("dbserver: accepting connection failed");
 
         // get code of request
@@ -41,7 +40,7 @@ int main(int argc, char* argv[]){
 
         // ensure request string is terminated
         requestCode[CODE_LEN-1] = '\0';
-        fprintf(stdout, "dbserver: received request '%s' from %u %hu\n", requestCode, clientAddress.sin_addr.s_addr, clientAddress.sin_port);
+        fprintf(stdout, "dbserver: received '%s'\n", requestCode);
 
         // try and satisfy request, if valid and possible
         if(handleRequest(requestCode, responseSocket, &clientlist) < 0)

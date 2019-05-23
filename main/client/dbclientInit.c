@@ -13,10 +13,10 @@ int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
         return -2;
 
     // send (IP address, port) pair to server
-    if(write(socket, &(clientAddress->sin_addr.s_addr), sizeof(uint32_t)) != sizeof(uint32_t))
+    if(write(socket, (uint32_t*)(&(clientAddress->sin_addr.s_addr)), sizeof(uint32_t)) != sizeof(uint32_t))
         return -3;
     
-    if(write(socket, &(clientAddress->sin_port), sizeof(uint16_t)) != sizeof(uint16_t))
+    if(write(socket, (uint16_t*)(&(clientAddress->sin_port)), sizeof(uint16_t)) != sizeof(uint16_t))
         return -4;
     return 0;
 }

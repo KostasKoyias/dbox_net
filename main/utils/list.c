@@ -78,9 +78,9 @@ int listDelete(struct G_list* list, const void *data){
 /* print all nodes of a list */
 int listPrint(const struct G_list *list){
     struct G_node* parser;
+    fprintf(stdout, "\e[1m\e[4mClient list\e[0m\n");
     if(list == NULL || list->head == NULL || list->print == NULL)
         return -1;
-    fprintf(stdout, "\e[1m\e[4mClient list\e[0m\n");
     for(parser = list->head; parser != NULL; parser = parser->next)
         list->print(parser->data);
     return 0;

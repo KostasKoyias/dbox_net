@@ -3,8 +3,8 @@
 \*************************************************************************************************************/
 #include "../include/utils.h"
 
-// create a socket, declaring that the address to be assigned to it, is reusable
-int getReuseAddrSocket(){
+// create a socket, declaring that the address to be assigned to it, is reusable, bind a name to it if specified
+int getReuseAddressSocket(struct sockaddr_in* user){
     int newSocket, option = 1;
 
     // create new socket
@@ -14,6 +14,10 @@ int getReuseAddrSocket(){
     // make address re-usable
     if(setsockopt(newSocket, 1, (SO_REUSEADDR | SO_REUSEPORT) , &option, sizeof(int)) < 0)
         return -2;
+
+    // bind socket on the specified address
+    if(user != NULL && (bind(newSocket, (struct sockaddr*)user, sizeof(*user)) < 0))
+            return -3;
     return newSocket;
 }
 
@@ -22,14 +26,17 @@ int getReuseAddrSocket(){
 // letting the server know who the client is by assigning the address of the client to his socket
 int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
     int newSocket, option = 1;
-
-    // create new socket
-    if((newSocket = getReuseAddrSocket()) < 0)
+    if(server == NULL)
         return -1;
 
-    // associate this socket with the client's address
-    if(bind(newSocket, (struct sockaddr*)client, sizeof(*client)) < 0)
-        return -2;    
+    // if client needs to be recognized, create a socket bound on an address that can be re-used
+    if(client != NULL){
+        if((newSocket = getReuseAddressSocket(client)) < 0)
+            return -1;
+    }
+    // else just create a socket to connect right away, server does not need the address of this client
+    else if((newSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+        return -1;
 
     // connect to server
     if(connect(newSocket, (struct sockaddr*)server, sizeof(*server)) == -1)
@@ -38,15 +45,18 @@ int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
 }
 
 // create a listening socket, bind it to an address and mark it as a passive one 
-int getListeningSocket(int portNumber){
+int getListeningSocket(uint32_t ip, uint16_t port){
     int listeningSocket;
+    struct sockaddr_in address = {.sin_addr.s_addr = ip, .sin_port = port, .sin_family = AF_INET};    
 
-    // create socket
-    if((listeningSocket = getReuseAddrSocket()) == -1)
+    // create socket and bind socket to a re-usable address accepting connections from all network interfaces
+    if((listeningSocket = getReuseAddressSocket(NULL)) == -1)
         return -1;
 
     // bind socket to an address
-    if(bindOnPort(listeningSocket, portNumber) == -1)
+    if(ip == 0)
+        bindOnPort(listeningSocket, port);
+    else if(bind(listeningSocket, (struct sockaddr*)&address, sizeof(address)) < 0)
         return -2;
 
     // mark socket as a passive one

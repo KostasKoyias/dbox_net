@@ -10,11 +10,11 @@ int exclusive_print(int, const char*, ...);
 
 // networking utility methods
 int establishConnection(struct sockaddr_in*, struct sockaddr_in*);
-int getListeningSocket(int);
+int getListeningSocket(uint32_t, uint16_t);
 int bindOnPort(int, uint16_t);
 int getMyIp(struct in_addr*);
 int statFile(char*);
-int getReuseAddrSocket();
+int getReuseAddrSocket(struct sockaddr_in*);
 
 
 #endif

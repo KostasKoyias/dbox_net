@@ -37,9 +37,9 @@ int getClientInfo(int socket, struct clientInfo* info){
         return -1;
 
     // get ip address and port of the client connected 
-    if(read(socket, &(info->ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(info->portNumber), sizeof(uint16_t)) == -1){
-        perror("dbserver: failed to get ip address and port for the logged on client");
+    if(read(socket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
         return -2;
-    }  
+    else if(read(socket, &(info->portNumber), sizeof(info->portNumber)) != sizeof(info->portNumber))
+        return -3;
     return 0;
 }

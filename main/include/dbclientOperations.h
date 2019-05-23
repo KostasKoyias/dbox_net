@@ -10,7 +10,6 @@
 #define LOG_OFF 1
 #define USER_ON 0
 #define USER_OFF 1
-#define FILE_CODE_LEN 20
 
 struct clientResources{
     pthread_mutex_t bufferMutex;
@@ -27,7 +26,8 @@ int informServer(uint8_t, int, struct sockaddr_in*);
 int getClients(int, struct sockaddr_in*, struct clientResources*);
 
 //request handling on main thread
-int handleRequest(char*, char*, int, struct clientResources*);
+int handleClientRequest(char*, char*, int, struct clientResources*);
+int handleServerMessage(char* , int, struct clientResources*);
 int handleGetFileList(int, char*);
 int handleGetFile(int, char*);
 int handleUser(int, int, struct clientResources*);

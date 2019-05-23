@@ -19,11 +19,14 @@
 #include <sys/types.h>
 #include <pthread.h>     //threads, mutexes
 #include <dirent.h>     //readdir
+ #include <inttypes.h>
 //#include <sys/wait.h>
 //#include <errno.h>
+
 #define HOST_SIZE 256
 #define PATH_SIZE 512
-#define CODE_LEN 15
+#define CODE_LEN 15         // requests on dbserver
+#define FILE_CODE_LEN 20    // requests on main thread of dbclient
 #define BACK_LOG 5
 #define SOCKET_CAPACITY 1024
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)

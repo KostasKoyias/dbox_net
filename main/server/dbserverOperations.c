@@ -79,12 +79,10 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
 
 // when a user logs in or out, let all other clients know
 int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list* list){
-    char event[CODE_LEN];
+    char event[FILE_CODE_LEN];
     struct G_node* iterator;
-    int generalSocket, rv = 0;
-    extern int portNumber;
-    struct sockaddr_in client, server = {.sin_port = portNumber, .sin_family = AF_INET};
-    socklen_t clientlen;
+    int generalSocket, informed = 0;
+    struct sockaddr_in client = {.sin_family = AF_INET};
 
     if(info == NULL || list == NULL)
         return -1;
@@ -94,39 +92,29 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
     else if(eventCode == USER_OFF)
         strcpy(event, "USER_OFF");
 
-    // create a socket to use for all clients
-    if((generalSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        return -1;
-
-    // bind socket to your address, so that clients can recognise that it is the server trying to connect
-    if(getMyIp(&(server.sin_addr)) < 0)
-        return -2;
-    if(bind(generalSocket, (struct sockaddr*)&server, sizeof(server)) < 0)
-        return -3;
-
-    
     // for each client in the list
-    for(iterator = list->head; iterator != NULL; iterator = iterator->next){
-        client.sin_addr.s_addr = info->ipAddress;
-        client.sin_port = info->portNumber;
+    for(iterator = list->head; iterator != NULL; iterator = iterator->next, close(generalSocket)){// close connection
+        client.sin_addr.s_addr = ((struct clientInfo*)iterator->data)->ipAddress;
+        client.sin_port = ((struct clientInfo*)iterator->data)->portNumber;
+
+        // omit the client who triggered this event
+        if(client.sin_addr.s_addr == info->ipAddress && client.sin_port == info->portNumber)
+            continue;
 
         // establish a connection with the client
-        if(connect(generalSocket, (struct sockaddr*)&client, sizeof(client)) < 0){
-            rv--;
+        if((generalSocket = establishConnection(NULL, &client)) < 0)
             continue;
-        }
 
-        // inform client
-        if((write(generalSocket, event, CODE_LEN) != CODE_LEN) 
-            || write(generalSocket, &(info->ipAddress), sizeof(info->ipAddress))
-            || write(generalSocket, &(info->portNumber), sizeof(info->portNumber))){
-                rv--;
-                continue;
-        }
-
-        // close and re-use socket
-        close(generalSocket);
+        // inform client specifying the user that entered/left the system
+        if(write(generalSocket, event, FILE_CODE_LEN) != FILE_CODE_LEN) 
+            continue;
+        else if(write(generalSocket, &(info->ipAddress), sizeof(info->ipAddress)) != sizeof(info->ipAddress))
+            continue;
+        else if(write(generalSocket, &(info->portNumber), sizeof(info->portNumber)) != sizeof(info->portNumber))
+            continue;
+        informed++;
     }
 
-    return 0;
+    // if there was even one client not informed properly, excluding the one who triggered the event, return -1 else 0
+    return (informed == list->length-1) - 1;
 }

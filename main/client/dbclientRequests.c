@@ -1,7 +1,7 @@
 #include "../include/dbclientOperations.h"
 
-// when a connection is established and a request is made, main thread needs to handle it
-int handleRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc){
+// when a connection is established and a request is made from another client, main thread needs to handle it
+int handleClientRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc){
 
     if(path == NULL || requestCode == NULL || rsrc == NULL)
         return -1;
@@ -13,19 +13,10 @@ int handleRequest(char* path, char* requestCode, int socket, struct clientResour
     // else if a client asked for a specific file, send it right away based on the protocol 
     else if(strcmp(requestCode, "GET_FILE") == 0)
         return handleGetFile(socket, path);
-
-    // else if this is a message from the server specifying a new user, make sure to get all new files
-    else if(strcmp(requestCode, "USER_ON") == 0)
-        return handleUser(USER_ON, socket, rsrc);
-
-    // else if this is a message from the server about a user exiting the system, remove user from user list
-    else if(strcmp(requestCode, "USER_OFF") == 0)
-        return handleUser(USER_OFF, socket, rsrc); 
-
+    
     // else request code is invalid
     else
         return -1;
-
 }
 
 // respond to a "GET_FILE_LIST" request by sending all file paths under input directory
@@ -163,6 +154,25 @@ int handleGetFile(int socket, char* directoryPath){
             return -10;
         return 2;
     }
+}
+
+// when server informs the client about a USER_ON/OFF act appropriately
+int handleServerMessage(char* requestCode, int socket, struct clientResources* rsrc){
+
+    if(requestCode == NULL || rsrc == NULL)
+        return -1;
+
+    // if this is a message from the server specifying a new user, make sure to get all new files
+    if(strcmp(requestCode, "USER_ON") == 0)
+        return handleUser(USER_ON, socket, rsrc);
+
+    // else if this is a message from the server about a user exiting the system, remove user from user list
+    else if(strcmp(requestCode, "USER_OFF") == 0)
+        return handleUser(USER_OFF, socket, rsrc); 
+
+    // else request code is invalid
+    else
+        return -1;
 }
 
 // handle a request from server about a new or exiting user

@@ -5,16 +5,18 @@ SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c 
 RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o 
 SERVER = dbserverOperations.o 
 CLIENT = dbclientOperations.o dbclientRequests.o dbclientInit.o dbclientWorker.o
+SERVER_SRCS = server/dbserver.c server/dbserverOperations.c
+CLIENT_SRCS = client/dbclient.c client/dbclientOperations.c client/dbclientRequests.c client/dbclientInit.c client/dbclientWorker.c
 OBJS = $(RSRC) $(SERVER) $(CLIENT)
 
 all: dbserver dbclient $(OBJS) 
 
 # applications
-dbserver: server/dbserver.c
-	$(CC) $(CFLAGS) -o dbserver server/*.c $(SOURCES) $(LFLAGS)
+dbserver: server/dbserver.c $(SERVER_SRCS)
+	$(CC) $(CFLAGS) -o dbserver $(SERVER_SRCS) $(SOURCES) $(LFLAGS)
 
-dbclient: client/dbclient.c $(RESOURCES)
-	$(CC) $(CFLAGS) -o dbclient client/*.c $(SOURCES) $(LFLAGS)
+dbclient: client/dbclient.c $(CLIENT_SRCS)
+	$(CC) $(CFLAGS) -o dbclient $(CLIENT_SRCS) $(SOURCES) $(LFLAGS)
 
 # utilities and data structures	
 msgUtils.o: utils/msgUtils.c 
