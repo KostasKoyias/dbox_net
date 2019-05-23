@@ -56,6 +56,7 @@ int setPath(char* dst, const char* src, const char* new){
 
     // rest is the new file/directory
     strcpy(dst + index + 1, new);
+    return 0;
 }
 
 // get last index of a character in a string, or -1 if not found

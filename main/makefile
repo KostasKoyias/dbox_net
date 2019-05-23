@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g3 #-Wall
+CFLAGS = -g3 #@@@@@@@@@@@-Wall
 LFLAGS = -lpthread -lrt
 SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c
 RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o 

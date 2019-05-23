@@ -8,8 +8,6 @@ int main(int argc, char* argv[]){
     int listeningSocket, responseSocket;
     uint32_t port;
     char requestCode[CODE_LEN];
-    struct sockaddr_in client;
-    socklen_t clientlen = sizeof(struct sockaddr_in);
 
     // declare handler in case of an interrupt signal received
     signal(SIGINT, handler);
@@ -28,7 +26,7 @@ int main(int argc, char* argv[]){
         fprintf(stdout, "\ndbserver: handling requests on port %hu(h)/%hu(n)\n", port, htons(port));
 
         // accept TCP connection
-        if((responseSocket = accept(listeningSocket, (struct sockaddr*)&client, &clientlen)) == -1)
+        if((responseSocket = accept(listeningSocket, NULL, NULL)) == -1)
             perror_exit("dbserver: accepting connection failed");
 
         // get code of request

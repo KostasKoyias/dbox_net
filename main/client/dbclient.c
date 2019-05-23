@@ -12,8 +12,7 @@ char* mirror;
 int main(int argc, char* argv[]){
     int i, dirName, generalSocket, bufferSize = 0;
     struct sockaddr_in otherClient = {.sin_family = AF_INET};
-    char hostName[HOST_SIZE], requestCode[FILE_CODE_LEN];
-    struct hostent* clienthostent;
+    char requestCode[FILE_CODE_LEN];
     struct clientInfo peerInfo;
     socklen_t otherClientlen = sizeof(struct sockaddr_in);
     struct stat statBuffer;

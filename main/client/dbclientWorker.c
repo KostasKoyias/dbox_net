@@ -1,5 +1,6 @@
 #include "../include/dbclient.h"
 
+// client's worker thread, implementing the client side of his, responsible for getting files of other clients 
 void* dbclientWorker(void* arg){
     struct clientResources* rsrc;
     struct fileInfo task;
@@ -54,6 +55,7 @@ void* dbclientWorker(void* arg){
             rv = getFile(sock, rsrc, &task);
         if(rv < 0)
             perror("dbclient: working thread failed to complete task");
+        close(sock);
     }
 
 powerOff:
@@ -61,6 +63,7 @@ powerOff:
     pthread_exit(NULL);
 }
 
+// get a list of all files from a certain client, put each of them in the buffer for some thread to ask for their content from that other client 
 int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN] = "GET_FILE_LIST";
     int len;
@@ -94,10 +97,13 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
     return 0;
 }
 
+
+// ask another client for a certain file
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
-    char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY];
-    int version, fileSize, sizeRead, sliceSize, localFile;
+    char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY], *localPath;
+    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0;
     extern char* mirror;
+    struct hostent* peer;
     if(rsrc == NULL || task == NULL)
         return -1;
 
@@ -106,45 +112,56 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
         return -3;
 
+    // get local path to file which is of the form "mirrorPath/nameOfClient/pathClientSendYou"
+    if((peer = gethostbyaddr(&(task->owner.ipAddress), sizeof(task->owner.ipAddress), AF_INET)) == NULL)
+        return -4;
+    if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + 3)) < 0)
+        return -5;
+    sprintf(localPath, "%s/%s/%s", mirror, peer->h_name, task->path);
+
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
-    version = statFile(task->path);
+    version = statFile(localPath);
 
     // specify file path on client's file system and version on this system
-    if(write(socket, &(task->path), PATH_SIZE) < 0 || write(socket, &version, sizeof(int)) != sizeof(int))
-        return -4;
+    if(write(socket, &(task->path), PATH_SIZE) < 0 || write(socket, &version, sizeof(int)) != sizeof(int)){
+        free(localPath); return -6;}
 
     // get response
-    if(read(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
-        return -5;
+    if(read(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN){
+        free(localPath); return -7;}
 
     // if file is already up to date, do nothing
-    if(strcmp(codeBuffer, "FILE_UP_TO_DATE") == 0)
-        return 0;
+    if(strcmp(codeBuffer, "FILE_UP_TO_DATE") == 0){
+        free(localPath); return 0;}
     
     // else get file copy
     else if(strcmp(codeBuffer, "FILE_SIZE") == 0){
         fileSize = atoi(codeBuffer);
 
         // create or truncate file copy of this system
-        localFile = open(task->path, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS);
+        localFile = open(localPath, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS);
 
         // until the whole file is copied
         for(sizeRead = 0; sizeRead < fileSize; sizeRead += sliceSize){
             
             // get file in SOCKET_CAPACITY slices
-            if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0)
-                return -7;
+            if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0){
+                close(localFile); free(localPath); return -8;}
 
             // put each slice in the local file
-            if(write(localFile, fileSlice, sliceSize) < 0)
-                return -8;
+            if(write(localFile, fileSlice, sliceSize) < 0){
+                close(localFile); free(localPath); return -9;}
         }
         if(sizeRead != fileSize)
-            return -9;
+            rv = -10;
+
+        close(localFile);
+        free(localPath);
+        return rv;
 
     }
 
     // else response code was incorrect
-    else 
-        return -10;
+    free(localPath);
+    return -11;
 }

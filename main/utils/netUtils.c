@@ -25,7 +25,7 @@ int getReuseAddressSocket(struct sockaddr_in* user){
 // given a client-server pair of addresses establish a connection between them
 // letting the server know who the client is by assigning the address of the client to his socket
 int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
-    int newSocket, option = 1;
+    int newSocket;
     if(server == NULL)
         return -1;
 

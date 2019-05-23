@@ -41,12 +41,14 @@ int handleGetFileList(int socket, char* dirPath){
     while((filePointer = readdir(dirPointer)) != NULL){
 
         // omit current, parent, hidden files/directories as well as too long path names
-        pathSize = strlen(dirPath) + strlen(filePointer->d_name);
         if((filePointer->d_name[0] == '.') ||  pathSize > PATH_SIZE-2)
             continue;
 
-        // get status of file under full path
-        sprintf(fullPath, "%s/%s", dirPath, filePointer->d_name);
+        // get status of file under full path, relative to this client's input directory
+        if(isRoot)
+            strcpy(fullPath, filePointer->d_name);
+        else
+            sprintf(fullPath, "%s/%s", dirPath, filePointer->d_name);
         if(stat(fullPath, &statBuffer) == -1){
             closedir(dirPointer);
             return -3;
@@ -60,6 +62,7 @@ int handleGetFileList(int socket, char* dirPath){
         else{
 
             // first let peer know about the path size, that many bytes will later on be read
+            pathSize = strlen(fullPath);
             if(write(socket, &pathSize, sizeof(int)) != sizeof(int) || (write(socket, fullPath, pathSize) != pathSize)){
                 closedir(dirPointer);
                 return -4;
