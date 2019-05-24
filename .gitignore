@@ -4,3 +4,4 @@
 *~
 main/dbserver
 main/dbclient
+test/rsrc/*
