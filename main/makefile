@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -g3 #@@@@@@@@@@@-Wall
+CFLAGS = -g3 -Wall
 LFLAGS = -lpthread -lrt
-SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c
-RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o 
+SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c utils/utils.c
+RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o utils.o
 SERVER = dbserverOperations.o 
 CLIENT = dbclientOperations.o dbclientRequests.o dbclientInit.o dbclientWorker.o
 SERVER_SRCS = server/dbserver.c server/dbserverOperations.c
@@ -24,6 +24,9 @@ msgUtils.o: utils/msgUtils.c
 
 netUtils.o: utils/netUtils.c 
 	$(CC) $(CFLAGS) -c utils/netUtils.c $(LFLAGS)
+
+utils.o: utils/utils.c 
+	$(CC) $(CFLAGS) -c utils/utils.c $(LFLAGS)
 
 list.o: utils/list.c 
 	$(CC) $(CFLAGS) -c utils/list.c $(LFLAGS)

@@ -11,10 +11,8 @@ char* mirror;
 
 int main(int argc, char* argv[]){
     int i, dirName = 0, generalSocket, bufferSize = 0;
-    struct sockaddr_in otherClient = {.sin_family = AF_INET};
     char requestCode[FILE_CODE_LEN];
     struct clientInfo peerInfo;
-    socklen_t otherClientlen = sizeof(struct sockaddr_in);
     struct stat statBuffer;
 
     signal(SIGINT, handler); // in case of a ^C signal
@@ -78,7 +76,7 @@ int main(int argc, char* argv[]){
         perror_free("dbclient: failed to get IP address of this client");
 
     // connect to server to issue a log_on request
-    if((generalSocket = establishConnection(NULL, &server)) < 0)
+    if((generalSocket = connectTo(&server)) < 0)
         perror_free("dbclient: failed establish connection at LOG_ON stage");
 
     // inform server for your arrival issuing a LOG_ON request
@@ -104,7 +102,7 @@ int main(int argc, char* argv[]){
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ GET_CLIENTS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // connect to server to issue a log_on request
-    if((generalSocket = establishConnection(NULL, &server)) < 0)
+    if((generalSocket = connectTo(&server)) < 0)
         perror_free("dbclient: failed to establish connection at GET_CLIENTS stage"); 
 
     if(getClients(generalSocket, &(address), &rsrc) < 0)
@@ -124,7 +122,7 @@ int main(int argc, char* argv[]){
         fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", address.sin_port, htons(address.sin_port));
 
         // accept TCP connection
-        if((generalSocket = accept(listeningSocket, (struct sockaddr*)&otherClient, &otherClientlen)) == -1){
+        if((generalSocket = accept(listeningSocket, NULL, NULL)) == -1){
             perror("dbclient: accepting connection failed");
             continue;
         }
@@ -137,15 +135,15 @@ int main(int argc, char* argv[]){
         requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
         fprintf(stdout, "dbclient: received \e[1;93m'%s'\e[0m request\n", requestCode);
 
-        // if peer is not a client from the list, it must be a USER_ON/OFF request from the server
-        peerInfo.ipAddress = otherClient.sin_addr.s_addr; peerInfo.portNumber = otherClient.sin_port;
-        if(confirmClient(&peerInfo, &rsrc) != 1){
-            if(handleServerMessage(requestCode, generalSocket, &rsrc) < 0)
-                perror("dbclient: \e[31;1mfailed\e[0m to handle server message");
+        // each request is followed by an (ip, port) pair
+        if(getClientInfo(generalSocket, &peerInfo) < 0){
+            perror("dbclient: failed to get id from client");
+            continue;
         }
-        // else it is a request from another client
-        else if(handleClientRequest(argv[dirName], requestCode, generalSocket, &rsrc) < 0)
-            perror("dbclient: \e[31;1mfailed\e[0m to serve another client");
+
+        // resolve request
+        if(handleRequest(argv[dirName], requestCode, generalSocket, &rsrc, &peerInfo) < 0)
+                perror("dbclient: \e[31;1mfailed\e[0m to handle request");
         else
             fprintf(stdout, "dbclient: \e[32;1msuccess\e[0m");
 
@@ -173,7 +171,7 @@ void handler(int sig){
         pthread_join(threadVector[i], NULL);
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
-    if((lastSocket = establishConnection(NULL, &server)) < 0)
+    if((lastSocket = connectTo(&server)) < 0)
         perror("dbclient: failed to establish a final connection before exiting");
 
     else if(informServer(LOG_OFF, lastSocket, &(address)) < 0){

@@ -102,12 +102,13 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
             continue;
 
         // establish a connection with the client
-        if((generalSocket = establishConnection(NULL, &client)) < 0)
-            continue;
+        if((generalSocket = connectTo(&client)) < 0){
+            perror("connect");
+            continue;}
 
         // inform client specifying the user that entered/left the system
-        if(write(generalSocket, event, FILE_CODE_LEN) != FILE_CODE_LEN) 
-            continue;
+        if(write(generalSocket, event, FILE_CODE_LEN) != FILE_CODE_LEN){ perror("write");
+            continue;}
         else if(sendClientInfo(generalSocket, info) < 0)
             continue;
         informed++;

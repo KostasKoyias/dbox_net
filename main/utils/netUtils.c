@@ -4,7 +4,7 @@
 #include "../include/utils.h"
 
 // create a socket, declaring that the address to be assigned to it, is reusable, bind a name to it if specified
-int getReuseAddressSocket(struct sockaddr_in* user){
+int getReuseAddressSocket(){
     int newSocket, option = 1;
 
     // create new socket
@@ -15,27 +15,19 @@ int getReuseAddressSocket(struct sockaddr_in* user){
     if(setsockopt(newSocket, 1, (SO_REUSEADDR | SO_REUSEPORT) , &option, sizeof(int)) < 0)
         return -2;
 
-    // bind socket on the specified address
-    if(user != NULL && (bind(newSocket, (struct sockaddr*)user, sizeof(*user)) < 0))
-            return -3;
     return newSocket;
 }
 
 
 // given a client-server pair of addresses establish a connection between them
 // letting the server know who the client is by assigning the address of the client to his socket
-int establishConnection(struct sockaddr_in* client, struct sockaddr_in* server){
+int connectTo(struct sockaddr_in* server){
     int newSocket;
     if(server == NULL)
         return -1;
 
-    // if client needs to be recognized, create a socket bound on an address that can be re-used
-    if(client != NULL){
-        if((newSocket = getReuseAddressSocket(client)) < 0)
-            return -1;
-    }
-    // else just create a socket to connect right away, server does not need the address of this client
-    else if((newSocket = socket(AF_INET , SOCK_STREAM , 0)) == -1)
+    // create a socket to connect right away, server does not need the address of this client
+    if((newSocket = getReuseAddressSocket()) == -1)
         return -1;
 
     // connect to server
@@ -50,7 +42,7 @@ int getListeningSocket(uint32_t ip, uint16_t port){
     struct sockaddr_in address = {.sin_addr.s_addr = ip, .sin_port = port, .sin_family = AF_INET};    
 
     // create socket and bind socket to a re-usable address accepting connections from all network interfaces
-    if((listeningSocket = getReuseAddressSocket(NULL)) == -1)
+    if((listeningSocket = getReuseAddressSocket()) == -1)
         return -1;
 
     // bind socket to an address
@@ -98,4 +90,22 @@ int statFile(char* path){
         return -1;
     else 
         return (int)statBuffer.st_mtime;
+}
+
+// convert sockaddr_in to clientInfo
+int addrToInfo(struct sockaddr_in* addr, struct clientInfo* info){
+    if(addr == NULL || info  == NULL)
+        return -1;
+    info->ipAddress = (uint32_t)addr->sin_addr.s_addr;
+    info->portNumber = (uint16_t)addr->sin_port;
+    return 0;
+}
+
+// convert clientInfo to sockaddr_in
+int infoToAddr(struct clientInfo* info, struct sockaddr_in* addr){
+    if(addr == NULL || info  == NULL)
+        return -1;
+    addr->sin_addr.s_addr = (in_addr_t)info->ipAddress;
+    addr->sin_port =  (in_port_t)info->portNumber;
+    return 0;
 }

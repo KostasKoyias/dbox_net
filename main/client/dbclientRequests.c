@@ -1,13 +1,28 @@
 #include "../include/dbclient.h"
 
 // when a connection is established and a request is made from another client, main thread needs to handle it
-int handleClientRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc){
-
+int handleRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc, struct clientInfo* peer){
+    struct fileInfo fileInfo = {.path = "\0", .version = -1}; //version -1 indicates that this is a GET_FILE_LIST task
     if(path == NULL || requestCode == NULL || rsrc == NULL)
         return -1;
 
+
+    // if this is a message from the server specifying a new user, make sure to get all new files
+    if(strcmp(requestCode, "USER_ON") == 0){
+        clientAssign(&(fileInfo.owner), peer);
+        return addClient(&fileInfo, rsrc);
+    }
+
+    // else if this is a message from the server about a user exiting the system, remove user from user list
+    else if(strcmp(requestCode, "USER_OFF") == 0)
+        return removeClient(peer, rsrc);
+
+    // else it was a request from another client, ensure that this client is a member of dbox_net 
+    else if(confirmClient(peer, rsrc) != 1) 
+        return -2;
+
     // if a client requested to log in all file paths under input directory, send them through the socket
-    if(strcmp(requestCode, "GET_FILE_LIST") == 0)
+    else if(strcmp(requestCode, "GET_FILE_LIST") == 0)
         return handleGetFileList(socket, path);
 
     // else if a client asked for a specific file, send it right away based on the protocol 
@@ -16,7 +31,7 @@ int handleClientRequest(char* path, char* requestCode, int socket, struct client
     
     // else request code is invalid
     else
-        return -1;
+        return -3;
 }
 
 // respond to a "GET_FILE_LIST" request by sending all file paths under input directory
@@ -105,10 +120,11 @@ int handleGetFile(int socket, char* directoryPath){
         return -1;
     
     // get relative file path from peer
-    if((read(socket, &pathSize, sizeof(pathSize)) != sizeof(pathSize)) || (read(socket, relativePath, pathSize) != pathSize))
+    if((read(socket, &pathSize, sizeof(pathSize)) != sizeof(pathSize)) || (pathSize >= PATH_SIZE-1) ||(read(socket, relativePath, pathSize) != pathSize))
         return -2;
 
     // append to directory path to get full path 
+    relativePath[pathSize] = '\0';
     sprintf(fullPath, "%s/%s", directoryPath, relativePath);
 
     // get version of file, return FILE_NOT_FOUND if it does not exists
@@ -164,39 +180,3 @@ int handleGetFile(int socket, char* directoryPath){
     }
 }
 
-// when server informs the client about a USER_ON/OFF act appropriately
-int handleServerMessage(char* requestCode, int socket, struct clientResources* rsrc){
-
-    if(requestCode == NULL || rsrc == NULL)
-        return -1;
-
-    // if this is a message from the server specifying a new user, make sure to get all new files
-    if(strcmp(requestCode, "USER_ON") == 0)
-        return handleUser(USER_ON, socket, rsrc);
-
-    // else if this is a message from the server about a user exiting the system, remove user from user list
-    else if(strcmp(requestCode, "USER_OFF") == 0)
-        return handleUser(USER_OFF, socket, rsrc); 
-
-    // else request code is invalid
-    else
-        return -1;
-}
-
-// handle a request from server about a new or exiting user
-int handleUser(int code, int socket, struct clientResources* rsrc){
-    struct fileInfo fileInfo = {.path = "\0", .version = -1}; //version -1 indicates that this is a GET_FILE_LIST task
-    if(rsrc == NULL)
-        return -1;
-
-    // get (IP, port) pair of the client
-    if(getClientInfo(socket, &(fileInfo.owner)) < 0)
-        return -2;
-    
-    if(code == USER_ON)
-        return addClient(&fileInfo, rsrc);
-    else if(code == USER_OFF)
-        return removeClient(&(fileInfo.owner), rsrc);
-    else 
-        return -3;
-}

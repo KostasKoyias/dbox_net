@@ -5,9 +5,11 @@ void* dbclientWorker(void* arg){
     struct clientResources* rsrc;
     struct fileInfo task;
     struct sockaddr_in peer = {.sin_family = AF_INET};
-    extern struct sockaddr_in address;
+    char codeBuffer[2][FILE_CODE_LEN] = {"GET_FILE", "GET_FILE_LIST"};
     int sock, rv;
     extern uint8_t powerOn;
+    extern struct sockaddr_in address;
+    struct clientInfo info;
 
     if(arg == NULL)
         return NULL;
@@ -40,11 +42,23 @@ void* dbclientWorker(void* arg){
         if(confirmClient(&(task.owner), rsrc) != 1)    
             continue;
 
-        // create socket, bind it to an address and establish a connection with peer
-        peer.sin_addr.s_addr = task.owner.ipAddress;
-        peer.sin_port = task.owner.portNumber;
-        if((sock = establishConnection(&address, &peer)) < 0){
+        // establish a connection with peer
+        infoToAddr(&(task.owner), &peer);
+        if((sock = connectTo(&peer)) < 0){
             perror("dbclient: working thread failed to establish connection with peer");
+            continue;
+        }
+
+        // make a GET_FILE or GET_FILE_LIST request 
+        if(write(sock, codeBuffer[task.version == -1], FILE_CODE_LEN) != FILE_CODE_LEN){
+            perror("dbclient: working thread failed to issue request");
+            continue;
+        }
+
+        // send your id
+        addrToInfo(&address, &info);
+        if(sendClientInfo(sock, &info) < 0){
+            perror("dbclient: working thread failed to send (ip, port) pair");
             continue;
         }
 
@@ -65,15 +79,12 @@ powerOff:
 
 // get a list of all files from a certain client, put each of them in the buffer for some thread to ask for their content from that other client 
 int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task){
-    char codeBuffer[FILE_CODE_LEN] = "GET_FILE_LIST";
     int len;
     if(rsrc == NULL || task == NULL)
         return -1;
-    
+
+
     printf("GET_FILE_LIST");//@@@@@@@@@@@
-    // make a GET_FILE_LIST request 
-    if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
-        return -2;
     
     //  receive (path_length, actual_path, version) file pairs until length 0 is encountered
     while(1){
@@ -102,10 +113,10 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
 // ask another client for a certain file
 int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     char codeBuffer[FILE_CODE_LEN], fileSlice[SOCKET_CAPACITY], *localPath;
-    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result, pathSize, index;
+    int version, fileSize, sizeRead, sliceSize, localFile, rv = 0, result, pathSize;
     extern char* mirror;
     struct hostent* peer;
-    char temp;
+
     if(rsrc == NULL || task == NULL)
         return -1;
 
@@ -122,11 +133,6 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
 
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(localPath);
-
-    // ask for the file
-    strcpy(codeBuffer, "GET_FILE");
-    if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
-        return -5;
 
     // specify file path on client's file system and version on this system
     pathSize = strlen(task->path);
@@ -181,5 +187,5 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
         rv = -12;
 
     free(localPath);
-    return -12;
+    return rv;
 }
