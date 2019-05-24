@@ -22,17 +22,9 @@ void* dbclientWorker(void* arg){
         // block until buffer is non-empty, then remove a task from circularBuffer
         pthread_mutex_lock(&(rsrc->bufferMutex));
         fprintf(stdout, "thread %ld: block, isEmpty? %d\n", pthread_self(), bufferIsEmpty(&(rsrc->buffer)));
-        while(bufferIsEmpty(&(rsrc->buffer))){
+        while(powerOn && bufferIsEmpty(&(rsrc->buffer)))
+            waitOnCondition(&(rsrc->emptyBuffer), &(rsrc->bufferMutex)); 
 
-            // atomically unlock buffer and self-block until condition holds, then lock again as soon as possible
-            pthread_cond_wait(&(rsrc->emptyBuffer), &(rsrc->bufferMutex)); 
-            
-            // check whether this thread was signaled in order to log out
-            if(!powerOn){
-                pthread_mutex_unlock(&(rsrc->bufferMutex));
-                goto powerOff;
-            }
-        }
         bufferRemove(&task, &(rsrc->buffer));
         fprintf(stdout, "thread %ld: pop task\n", pthread_self());
         pthread_cond_signal(&(rsrc->fullBuffer));   // signal a pending thread
@@ -71,9 +63,6 @@ void* dbclientWorker(void* arg){
             perror("dbclient: working thread failed to complete task");
         close(sock);
     }
-
-powerOff:
-    fprintf(stdout, "thread %ld: got power off!\n", pthread_self());
     pthread_exit(NULL);
 }
 

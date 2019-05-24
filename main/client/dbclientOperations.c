@@ -22,7 +22,7 @@ int addTask(struct fileInfo* fileInfo, struct clientResources* rsrc){
     // add a GET_FILE or GET_FILE_LIST task to the circular buffer for a working thread to ask for all files of the new client 
     pthread_mutex_lock(&(rsrc->bufferMutex));
     while(bufferIsFull(&(rsrc->buffer)))
-        pthread_cond_wait(&(rsrc->fullBuffer), &(rsrc->bufferMutex));
+        waitOnCondition(&(rsrc->fullBuffer), &(rsrc->bufferMutex));
     bufferAdd(fileInfo, &(rsrc->buffer));
     bufferPrint(&(rsrc->buffer));
 
@@ -88,4 +88,29 @@ int confirmClient(struct clientInfo* peerInfo, struct clientResources* rsrc){
     result = listSearch(&(rsrc->list), peerInfo);
     pthread_mutex_unlock(&(rsrc->listMutex));
     return (result == NULL ? 0 : 1);
+}
+
+
+// wait until a condition is signaled/broadcasted, check whether that was because of a termination broadcast
+int waitOnCondition(pthread_cond_t* cond, pthread_mutex_t* mutex){
+    extern uint8_t powerOn;
+
+    if(cond == NULL || mutex == NULL)
+        return -1;
+
+    // atomically unlock buffer and self-block until condition holds, then lock again as soon as possible
+    pthread_cond_wait(cond, mutex); 
+    
+    // check whether this thread was signaled in order to log out, if so unlock mutex for other threads to exit as well
+    if(!powerOn){
+        pthread_mutex_unlock(mutex);
+        powerOff();
+    }
+    return 0;
+}
+
+// terminate thread
+void powerOff(){
+    fprintf(stdout, "thread %ld: got power off!\n", pthread_self());
+    pthread_exit(NULL);
 }

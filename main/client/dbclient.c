@@ -161,7 +161,7 @@ void handler(int sig){
 
     // inform workers of shut-down
     powerOn = 0;
-    if(pthread_cond_broadcast(&(rsrc.emptyBuffer)) != 0){
+    if(pthread_cond_broadcast(&(rsrc.emptyBuffer)) != 0 || pthread_cond_broadcast(&(rsrc.emptyBuffer))){
         perror("dbclient: failed to inform workers, leaving without them\n"); 
         free_rsrc(EXIT_FAILURE);
     }

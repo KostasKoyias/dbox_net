@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This **multi-threaded** application provides a file-synchronization service to all connected users
+This **multi-threaded** linux-specific application provides a file-synchronization service to all connected users
 using TCP connections over the **network**.
 Each client is uniquely identified by a (IP, port) pair
 and enters the system with a private **input** folder.
@@ -13,6 +13,10 @@ of all clients connected. In addition, the server informs all clients about the 
 After that, it is up to them to get synchronized with the new client
 and look out for any inner coming or outgoing clients.  
 So this is a **peer-to-peer** application.  
+
+<div style="text-align:center">
+    <img src="./rsrc/intro.png" height="350px" width="500px" class="center" alt="intro">
+</div>
 
 ## How it works
 
@@ -63,12 +67,12 @@ This side is a bit more complicated. Each client uses a **main thread**  in orde
 This part consists of
 
 * handling command line arguments
-* allocating memory for all data structures required
+* allocating memory and creating all data structures required
 * creating all worker threads needed
 
 #### Log-in
 
-To successfully log-in, a connection is established with the dbserver, a USER_ON (ip, port)
+To successfully log-in, a connection is established with the dbserver, a LOG_ON (ip, port)
 message is sent and a list containing all connected clients is received.
 
 #### Add tasks
@@ -81,19 +85,72 @@ The exact role of those is in detail explained later.
 
 Similarly, worker threads of other clients request files of the new one,
 so the main thread is responsible of serving those.
+Let us take a look on the diagram below, to better understand this.
+
+<div style="text-align:center">
+    <img src="./rsrc/main.png" height="600px" width="100%" class="center" alt="main_life">
+</div>
+
+This is continuously happening until closure.
+Requests GET_FILE and GET_FILE_LIST require verification of the client.
 
 #### Closure
 
 On an interrupt signal, main thread
 
-* sends a USER_OFF (IP, port) message to the dbserver
+* sends a **LOG_OFF** (IP, port) message to the dbserver
 * sets power to off, letting all worker threads know about the terminating signal
 and waits for them to exit safely
 * lets all resources required for this client to operate(e.g list, buffer) go,
 de-allocating all memory used.  
 
-Let us see how a main thread works
+### Worker threads
+
+These threads implement the client-side of the peer-to-peer relationship amongst clients, so
+they request and receive files of others, until an interrupt signal is caught.
+The life of a worker thread looks like this
 
 <div style="text-align:center">
-    <img src="./rsrc/main.png" height="500px" width="500px" class="center" alt="server_life">
-</div
+    <img src="./rsrc/worker.png" height="800px" width="100%" class="center" alt="worker_life">
+</div>
+The above is continuously happening until closure.
+
+### Synchronization
+
+For all threads to co-operate and in order to avoid race conditions, all resources are associated
+with a lock(pthread_mutex_t).
+Notice that the circularBuffer has a fixed capacity given from the command line. That said,
+threads might need to wait before adding a task to it. This holds both for the main
+thread during initialization and for the worker threads during a GET_FILE_LIST request.
+In addition, worker threads might have to wait until a task is added in case of an empty buffer.
+Of course, busy waiting is not option,
+so the lock of circularBuffer is also associated with two condition variables.
+
+* **fullBuffer**: signaled when a task is removed
+* **emptyBuffer**: signaled when a task is added
+
+both of those are broadcasted at closure.
+
+### Run client
+
+After compilation, one can run the client program as follows
+
+```bash
+dbox_net/main/client/dbclient -w numberOfWorkerThreads  -d inputDirectoryPath
+                              -sip dbserverIpAddress -sp dbserverPortNumber
+                              -b circularBufferCapacity -p dbclientPortNumber
+  
+```
+
+## Epilogue
+
+To bring it all together, this is a simple, easy-to-use, multi-threaded, file-synchronization,
+peer-to-peer, network application using linux API for threads and file operations. Hopefully,
+that document made things clear. If not, feel free to comment on this project for any
+questions or ideas you might have. Last but not least, make sure you take a look at
+the source code. Each component is fairly isolated, following the
+[single_responsibility_principle](https://en.wikipedia.org/wiki/Single_responsibility_principle)
+at all times. As a result, all methods are small in size and easy to understand, hiding all
+detail from the user. Of course, this project is accompanied by a makefile.
+
+Thanks for reading.

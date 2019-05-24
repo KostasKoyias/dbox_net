@@ -43,6 +43,8 @@ int removeClient(struct clientInfo*, struct clientResources*);
 int rsrcInit(struct clientResources*, int);
 int rsrcFree(struct clientResources*);
 int confirmClient(struct clientInfo*, struct clientResources*);
+int waitOnCondition(pthread_cond_t*, pthread_mutex_t*);
+void powerOff();
 
 //utilities for main thread
 void handler(int);
