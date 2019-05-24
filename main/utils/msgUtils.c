@@ -72,6 +72,20 @@ int lastIndexOf(char c, const char* str){
     return -1;
 }
 
+// given a path of a regular file, make parent directories as needed
+int makeParents(char* path, mode_t mode){
+    int i, rv = 0;
+    char temp;
+    if(path == NULL || (i = lastIndexOf('/', path)) < 0)
+        return -1;
+    temp = path[i];
+    path[i] = '\0';
+    rv = mkdirTree(path, mode);
+    path[i] = temp;
+    return rv;
+}
+
+
 // given a directory path, create it making parent directories as needed, similar to --parents option of mkdir system program 
 int mkdirTree(char* path, mode_t mode){
     int i;

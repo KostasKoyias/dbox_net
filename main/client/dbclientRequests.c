@@ -113,16 +113,16 @@ int handleGetFile(int socket, char* directoryPath){
 
     // get version of file, return FILE_NOT_FOUND if it does not exists
     if(stat(fullPath, &statBuffer) == -1){
-        printf("%s not found\n", fullPath);
+        printf("%s not found\n", fullPath); //@@
+        perror("error:"); //@@
         strcpy(responseCode, "FILE_NOT_FOUND");
-        perror("error:");
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
             return -3;
         return 0;
     }
 
     // get version number of the file copy the peer owns
-    if(read(socket, &version, sizeof(int)) != sizeof(int))
+    if(read(socket, &version, sizeof(version)) != sizeof(version))
         return -4;
 
     // if peer owns an out dated version, send the file
@@ -134,7 +134,7 @@ int handleGetFile(int socket, char* directoryPath){
             return -5;
 
         // send file size
-        if(write(socket, &(statBuffer.st_size), sizeof(off_t)) != sizeof(off_t))
+        if(write(socket, &(statBuffer.st_size), sizeof(int)) != sizeof(int))
             return -6;
 
         // send file content by first opening file

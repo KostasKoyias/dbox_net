@@ -17,6 +17,7 @@ int statFile(char*);
 int getReuseAddrSocket(struct sockaddr_in*);
 int setPath(char*, const char*, const char*);
 int lastIndexOf(char, const char*);
+int makeParents(char*, mode_t);
 int mkdirTree(char*, mode_t);
 
 

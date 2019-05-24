@@ -109,48 +109,40 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     if(rsrc == NULL || task == NULL)
         return -1;
 
-    // ask for the file
-    strcpy(codeBuffer, "GET_FILE");
-    if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
+    // get local path to the directory made for the other client under mirror which is of the form "mirrorPath/nameOfClient/pathClientSendYou"
+    if((peer = gethostbyaddr(&(task->owner.ipAddress), sizeof(task->owner.ipAddress), AF_INET)) == NULL)
+        return -2;
+    if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + 3)) < 0)
         return -3;
 
-    // get local path to the directory made for the other client under mirror which is of the form "mirrorPath/nameOfClient/"
-    if((peer = gethostbyaddr(&(task->owner.ipAddress), sizeof(task->owner.ipAddress), AF_INET)) == NULL)
-        return -4;
-    if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + 3)) < 0)
-        return -5;
-
-    // if it does not exist already, create it
-    sprintf(localPath, "%s/%s/", mirror, peer->h_name);
-    if((result = mkdirTree(localPath, DIR_PERMS)) < 0 && result != EEXIST){
-        free(localPath); return -6;}
-
-    // get path to the actual file, that path looks like "mirrorPath/nameOfClient/pathClientSendYou"
-    strcat(localPath, task->path);
+    // make parent directories as needed
+    sprintf(localPath, "%s/%s/%s", mirror, peer->h_name, task->path);
+    if((result = makeParents(localPath, DIR_PERMS)) < 0 && result != EEXIST){
+        free(localPath); return -4;}
 
     // get current version of file, if it exists on this system, else it will be set to -1, so then, it is always OUT_DATED  
     version = statFile(localPath);
+
+    // ask for the file
+    strcpy(codeBuffer, "GET_FILE");
+    if(write(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN)
+        return -5;
 
     // specify file path on client's file system and version on this system
     pathSize = strlen(task->path);
     if(write(socket, &pathSize, sizeof(pathSize)) != sizeof(pathSize)){
         free(localPath); return -6;}
 
-
-    if(write(socket, &(task->path), pathSize) != pathSize || write(socket, &version, sizeof(int)) != sizeof(int)){
+    if(write(socket, &(task->path), pathSize) != pathSize || write(socket, &version, sizeof(version)) != sizeof(version)){
         free(localPath); return -7;}
 
     // get response
     if(read(socket, codeBuffer, FILE_CODE_LEN) != FILE_CODE_LEN){
         free(localPath); return -8;}
 
-    // if file is already up to date, do nothing
-    if(strcmp(codeBuffer, "FILE_UP_TO_DATE") == 0){
-        free(localPath); return 0;}
-
-    // else if file was not found, return immediately
-    else if(strcmp(codeBuffer, "FILE_NOT_FOUND") == 0)
-        return 0;
+    // if file is already up to date, or it was not found, do nothing
+    if((strcmp(codeBuffer, "FILE_UP_TO_DATE") == 0) || (strcmp(codeBuffer, "FILE_NOT_FOUND") == 0))
+        rv = 0;
             
     // else get file copy
     else if(strcmp(codeBuffer, "FILE_SIZE") == 0){
@@ -160,40 +152,34 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
             free(localPath); return -9;}
 
         // create or truncate file copy of this system, make parent directories as needed
-        index = lastIndexOf('/', localPath);
-        temp = localPath[index];
-        localPath[index] = '\0';
-        if(mkdirTree(localPath, DIR_PERMS) < 0){
-            free(localPath); return -10;
-        }
-        localPath[index] = temp;
         if((localFile = open(localPath, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS)) < 0){
-            printf("%s\n", localPath);
-            perror("open");
-            return -11;
+            printf("%s\n", localPath);//@@
+            free(localPath);
+            perror("open");//@@
+            return -10;
         }
 
         // until the whole file is copied
         for(sizeRead = 0; sizeRead < fileSize; sizeRead += sliceSize){
             
             // get file in SOCKET_CAPACITY slices
-            if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0){
-                close(localFile); free(localPath); return -12;}
+            if((sliceSize = read(socket, fileSlice, SOCKET_CAPACITY)) < 0)
+                break;
 
             // put each slice in the local file
-            if(write(localFile, fileSlice, sliceSize) < 0){
-                close(localFile); free(localPath); return -13;}
+            if(write(localFile, fileSlice, sliceSize) != sliceSize)
+                break;
         }
         if(sizeRead != fileSize)
-            rv = -13;
+            rv = -11;
 
         close(localFile);
-        free(localPath);
-        return rv;
-
     }
 
     // else response code was incorrect
+    else
+        rv = -12;
+
     free(localPath);
     return -12;
 }
