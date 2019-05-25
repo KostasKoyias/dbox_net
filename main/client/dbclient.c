@@ -65,9 +65,9 @@ int main(int argc, char* argv[]){
     if((i = mkdirTree(mirror, DIR_PERMS)) < 0)
         perror_free("dbclient: failed to create mirror directory at login");
     else if(i == EEXIST)
-        fprintf(stdout, "dbclient: re-logged in dbox, input direcory under %s and mirror under %s\n", argv[dirName], mirror);
+        fprintf(stdout, "dbclient: re-logged in dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
     else
-        fprintf(stdout, "dbclient: first time at dbox, input direcory under %s and mirror under %s\n", argv[dirName], mirror);
+        fprintf(stdout, "dbclient: first time at dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
     
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]){
 
     // connect to server to issue a log_on request
     if((generalSocket = connectTo(&server)) < 0)
-        perror_free("dbclient: failed establish connection at LOG_ON stage");
+        perror_free("dbclient: failed to establish connection at LOG_ON stage");
 
     // inform server for your arrival issuing a LOG_ON request
     if(informServer(LOG_ON, generalSocket, &(address)) < 0)

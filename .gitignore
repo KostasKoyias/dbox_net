@@ -5,4 +5,5 @@
 main/dbserver
 main/dbclient
 test/rsrc/client*
+test/src/out
 package.json

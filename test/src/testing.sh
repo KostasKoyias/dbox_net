@@ -1,49 +1,49 @@
 #!/bin/bash
-max_users=8
+##############################################################################################################################################
+# this script uses ssh to connect to linux01.di.uoa.gr , locates the path to a certain application, let us say "my_app", that must contain a #
+# makefile which generates binary programs named "dbserver" and "dbclient". It then initializes a trial folder under my_app/test/rsrc/trial  #
+# containg folders client01, client02, ..., client0n with random content, runs the dbserver. Right after that, it creates one "dbclient"     #
+# process for each machine: linux01.di.uoa.gr-linux0${3}.di.uoa.gr. So, the first argumet is the sdi, 2nd is the application name and 3rd is #
+# the # of clients(max is 8), default is 5. After $1*10 seconds, it sends a SIGINT to each of those clients and after 10 more to the server  #
+##############################################################################################################################################
+
+max_users=8        # change to your preference
+id=${1-1500071}
+app_name=${2-dbox_net}
+users=${3-5}
 ### make sure the right number of arguments is passed
-if [ $# -ne 0 ] && [ $# -ne 1 ]
+if [ $# -ne 2 ] && [ $# -ne 3 ] 
 then
-    echo "Usage: $0 (number_of_users)"
+    echo "Usage: $0 <sdi> <app_name> (<number_of_users>)"
     exit 1
 fi
 
 ### support at most $max_users users
-if [ $# -ne 0 ] && [ $1 -gt $max_users ]
+if [ $users -gt $max_users ]
 then 
-    echo "Error: too many users, maximum is 10"
+    echo -e "testing.sh: \e[1;31mError\e[0m, too many users, maximum is $max_users"
     exit 2
 fi
 
 ### connect to linux01.di.uoa.gr to compile source code, prepare input files and run the server
-ssh sdi1500071@linux01.di.uoa.gr 'bash -s' < initialize.sh $1
-exit 0
+mkdir out >& /dev/null
+ssh sdi$id@linux01.di.uoa.gr 'bash -s' < initialize.sh $users $app_name >& out/server.txt &
+sleep 30
 
-### for each user:i)generate a unique user ID, ii)create an input folder and iii)run a mirror executable iv)store their pids in a list
-users=${1-5}
+### run a client process for each user in a different machine at linux workstations of di.uoa.gr
+secs_of_operation=$(($users*15))
+echo "testing.sh: running $users clients... for $secs_of_operation seconds each"
 declare -a pids
-echo "runnin $users clients..."
-for ((i = 0;i < $users; i++))
+for ((i = 1;i <= $users; i++))
 do
-    let id=$i*11+1
-    $create_input $tst/inputs/input_$id 5 3 2 > /dev/null
-    $mirror -n $id -c $tst/common -i $tst/inputs/input_$id -m $tst/mirrors/mirror_dir_$id -b 32 -l $tst/logs/log_$id &> $tst/trash/trash_$id &
+    ssh sdi$id@linux0$i.di.uoa.gr 'bash -s' < client.sh $secs_of_operation $i >& out/client0$i.txt &
     pids+=($!)
 done
-echo "done"
 
-### let all users sync with each other
-let time=users*10
-echo "sleeping for $time seconds, letting them sync with each other..."
-sleep $time
-
-### terminate all mirror processes generated, wait until each of them exits safely
-echo "woke up, sending an interrupt signal to all mirror processes in the system"
+### wait for all clients to terminate
 for i in ${pids[@]}
-do 
-    kill -INT $i 
+do
+    kill -INT $i
     wait $i
 done
-echo "done"
-
-### get statistics of the operation
-echo -e "done\nexiting now..."
+echo -e "testing.sh: all processes terminated\ntesting.sh: exiting now..."
