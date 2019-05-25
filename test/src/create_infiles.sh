@@ -31,7 +31,8 @@ randomGenerator=$(which fortune)
 if [ $? -ne 0 ]
 then
     # else use ./names.sh, creating random size files in range [64KB-128KB]KB
-    randomGenerator="./names.sh 128 $((512 + $RANDOM%512))" # file size is at most 128KB
+    names=$(find . -type f -name "names.sh")
+    randomGenerator="$names 128 $((512 + $RANDOM%512))" # file size is at most 128KB
 fi
 
 # if program "tree" is installed use it to display the content of each directory created, else simply use ls

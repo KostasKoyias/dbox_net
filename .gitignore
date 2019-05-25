@@ -4,5 +4,5 @@
 *~
 main/dbserver
 main/dbclient
-test/rsrc/*
+test/rsrc/client*
 package.json

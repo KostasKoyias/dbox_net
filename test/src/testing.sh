@@ -1,35 +1,22 @@
 #!/bin/bash
-### make sure the right number of arhuments is passed
+max_users=8
+### make sure the right number of arguments is passed
 if [ $# -ne 0 ] && [ $# -ne 1 ]
 then
     echo "Usage: $0 (number_of_users)"
     exit 1
 fi
 
-### support at most 10 users
-if [ $# -ne 0 ] && [ $1 -gt 10 ]
+### support at most $max_users users
+if [ $# -ne 0 ] && [ $1 -gt $max_users ]
 then 
     echo "Error: too many users, maximum is 10"
     exit 2
 fi
-### find dbox_net folder on linux.di servers of uoa
-linux_server="ssh sdi1500071@linux01.di.uoa.gr"
-dbox_net=$($linux_server "find . -type d -name "dbox_net" | head")
-echo path_to dbox_net: $dbox_net
 
-
-client=$($linux_server "cd $dbox_net/main;make" )
-echo just compiled
+### connect to linux01.di.uoa.gr to compile source code, prepare input files and run the server
+ssh sdi1500071@linux01.di.uoa.gr 'bash -s' < initialize.sh $1
 exit 0
-
-### get paths of: i)the input file generator script and ii)the user's executable 
-create_input=./create_infiles.sh
-exe=$(find .. -name "dbclient")
-if [ $? -ne 0 ]
-then 
-    echo "Error: dbclient executable could not be found, enter \"main\" folder and type 'make'"
-    exit 3
-fi 
 
 ### for each user:i)generate a unique user ID, ii)create an input folder and iii)run a mirror executable iv)store their pids in a list
 users=${1-5}
@@ -59,6 +46,4 @@ done
 echo "done"
 
 ### get statistics of the operation
-echo "getting stats from log files, putting them in $tst/stats..."
-cat $tst/logs/* | $(find .. -name "get_stats.sh") > $tst/stats
 echo -e "done\nexiting now..."
