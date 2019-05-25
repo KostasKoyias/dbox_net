@@ -21,7 +21,7 @@ int main(int argc, char* argv[]){
     
     // create a listening socket, bind it to an address and mark it as a passive one 
     if((listeningSocket = getListeningSocket(0, port)) < 0)
-        perror_exit("dbserver: failed to get a listening socket");
+        perror_exit("dbserver: \e[31;1mfailed\e[0m to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     while(1){
@@ -29,11 +29,11 @@ int main(int argc, char* argv[]){
 
         // accept TCP connection
         if((responseSocket = accept(listeningSocket, (struct sockaddr*)&client, &clientlen)) == -1)
-            perror_exit("dbserver: accepting connection failed");
+            perror_exit("dbserver: accepting connection \e[31;1mfailed\e[0m");
 
         // get code of request
         if(read(responseSocket, requestCode, CODE_LEN) != CODE_LEN){
-            perror("dbserver: failed to get request from client");
+            perror("dbserver: \e[31;1mfailed\e[0m to get request from client");
             continue;
         }
 
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
 
         // try and satisfy request, if valid and possible
         if(handleRequest(requestCode, responseSocket, &clientlist) < 0)
-            perror("dbserver: failed to completely satisfy the request");
+            perror("dbserver: \e[31;1mfailed\e[0m to completely satisfy the request");
     
         // close response socket, not to run out of file descriptors
         close(responseSocket);

@@ -48,7 +48,7 @@ int sendClients(int socket, struct G_list* list){
 // insert a new client or remove an existing one from the client list, based on a request code
 int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     struct clientInfo info;
-    char notFound[] = "ERROR_IP_PORT_NOT_FOUND_IN_LIST";
+    uint8_t response[2] = {0, 1};
     if(list == NULL || socket < 0)
         return -1;
 
@@ -65,16 +65,19 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     // else remove client from the client list, send USER OFF to all other clients
     else if(operationCode == CLIENT_DELETE){
 
-        // if client does not exist, send a "ERROR_IP_PORT_NOT_FOUND_IN_LIST" message back to the client
+        // if client does not exist, respond with a 0 indicating: "ERROR_IP_PORT_NOT_FOUND_IN_LIST", else respond sending 1
         if(listDelete(list, &info) < 0){
-            write(socket, notFound, sizeof(notFound));
-            return -4;
+            if(write(socket, response, sizeof(response[0])) != sizeof(response[0]))
+                return -4;
+            return -5;
         }
+        if(write(socket, &(response[1]), sizeof(response[1])) != sizeof(response[1]))
+            return -6;
         return informOtherClients(USER_OFF, &info, list);
     }
     // else operation code is invalid
     else 
-        return -5;
+        return -7;
 }
 
 // when a user logs in or out, let all other clients know
@@ -97,8 +100,8 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
         client.sin_addr.s_addr = ((struct clientInfo*)iterator->data)->ipAddress;
         client.sin_port = ((struct clientInfo*)iterator->data)->portNumber;
 
-        // omit the client who triggered this event
-        if(client.sin_addr.s_addr == info->ipAddress && client.sin_port == info->portNumber)
+        // omit the client who triggered this event, in case of an insertion
+        if(eventCode == USER_ON && client.sin_addr.s_addr == info->ipAddress && client.sin_port == info->portNumber)
             continue;
 
         // establish a connection with the client
@@ -115,5 +118,5 @@ int informOtherClients(uint8_t eventCode, struct clientInfo* info, struct G_list
     }
 
     // if there was even one client not informed properly, excluding the one who triggered the event, return -1 else 0
-    return (informed == list->length-1) - 1;
+    return (informed == list->length - (eventCode == USER_ON)) - 1;
 }

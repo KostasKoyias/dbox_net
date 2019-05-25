@@ -58,12 +58,12 @@ int main(int argc, char* argv[]){
 
     // specify path for mirror directory
     if((mirror = malloc(strlen(argv[dirName]) + strlen(MIRROR) + 2)) < 0)
-        perror_exit("dbclient: failed to allocate space in order to specify the path of mirror directory");
+        perror_exit("dbclient: \e[31;1mfailed\e[0m to allocate space in order to specify the path of mirror directory");
     setPath(mirror, argv[dirName], MIRROR);
 
     // create mirror directory, if it does not exist and announce presence
     if((i = mkdirTree(mirror, DIR_PERMS)) < 0)
-        perror_free("dbclient: failed to create mirror directory at login");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to create mirror directory at login");
     else if(i == EEXIST)
         fprintf(stdout, "dbclient: re-logged in dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
     else
@@ -73,15 +73,15 @@ int main(int argc, char* argv[]){
 
     // get IP address of this machine
     if(getMyIp(&(address.sin_addr)) < 0)
-        perror_free("dbclient: failed to get IP address of this client");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get IP address of this client");
 
     // connect to server to issue a log_on request
     if((generalSocket = connectTo(&server)) < 0)
-        perror_free("dbclient: failed to establish connection at LOG_ON stage");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at LOG_ON stage");
 
     // inform server for your arrival issuing a LOG_ON request
     if(informServer(LOG_ON, generalSocket, &(address)) < 0)
-        perror_free("dbclient: failed to inform server on arrival");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to inform server on arrival");
     close(generalSocket);
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ THREADS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -91,11 +91,11 @@ int main(int argc, char* argv[]){
 
     // kick-start worker threads
     if((threadVector = malloc(sizeof(pthread_t) * workerThreads)) == NULL)
-        perror_free("dbclient: failed to allocate space for a thread id vector");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to allocate space for a thread id vector");
 
     for(i = 0; i < workerThreads; i++){
         if(pthread_create(threadVector+i, NULL, dbclientWorker, &rsrc))
-            perror_free("dbclient: failed to create worker thread");
+            perror_free("dbclient: \e[31;1mfailed\e[0m to create worker thread");
     }
 
 
@@ -103,10 +103,10 @@ int main(int argc, char* argv[]){
 
     // connect to server to issue a log_on request
     if((generalSocket = connectTo(&server)) < 0)
-        perror_free("dbclient: failed to establish connection at GET_CLIENTS stage"); 
+        perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at GET_CLIENTS stage"); 
 
     if(getClients(generalSocket, &(address), &rsrc) < 0)
-        perror_free("dbclient: failed to get dbox client list from server");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get dbox client list from server");
     close(generalSocket);
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]){
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // create a listening socket, bind it to an address and mark it as a passive one 
     if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
-        perror_free("dbclient: failed to get a listening socket");
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get a listening socket");
 
     // accept connections until an interrupt signal is caught
     while(1){
@@ -123,13 +123,13 @@ int main(int argc, char* argv[]){
 
         // accept TCP connection
         if((generalSocket = accept(listeningSocket, NULL, NULL)) == -1){
-            perror("dbclient: accepting connection failed");
+            perror("dbclient: accepting connection \e[31;1mfailed\e[0m");
             continue;
         }
 
         // get code of request 
         if(read(generalSocket, requestCode, FILE_CODE_LEN) != FILE_CODE_LEN){
-            perror("dbclient: failed to get request from client");
+            perror("dbclient: \e[31;1mfailed\e[0m to get request from client");
             continue;
         }
         requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]){
 
         // each request is followed by an (ip, port) pair
         if(getClientInfo(generalSocket, &peerInfo) < 0){
-            perror("dbclient: failed to get id from client");
+            perror("dbclient: \e[31;1mfailed\e[0m to get id from client");
             continue;
         }
 
@@ -158,11 +158,12 @@ int main(int argc, char* argv[]){
 // in case of an interrupt signal
 void handler(int sig){
     int i, lastSocket;
+    uint8_t response;
 
     // inform workers of shut-down
     powerOn = 0;
     if(pthread_cond_broadcast(&(rsrc.emptyBuffer)) != 0 || pthread_cond_broadcast(&(rsrc.emptyBuffer))){
-        perror("dbclient: failed to inform workers, leaving without them\n"); 
+        perror("dbclient: \e[31;1mfailed\e[0m to inform workers, leaving without them\n"); 
         free_rsrc(EXIT_FAILURE);
     }
 
@@ -172,14 +173,18 @@ void handler(int sig){
 
     // let server know that you are about to exit dbox system issuing a LOG_OFF request
     if((lastSocket = connectTo(&server)) < 0)
-        perror("dbclient: failed to establish a final connection before exiting");
+        perror("dbclient: \e[31;1mfailed\e[0m to establish a final connection before exiting");
 
-    else if(informServer(LOG_OFF, lastSocket, &(address)) < 0){
-        perror("dbclient: failed to inform server about LOG_OFF before exiting");
+    else{
+        if(informServer(LOG_OFF, lastSocket, &(address)) < 0)
+            perror("dbclient: \e[31;1mfailed\e[0m to inform server about LOG_OFF before exiting");
+        else if(read(lastSocket, &response, sizeof(response)) != sizeof(response))
+            perror("dbclient: \e[31;1mfailed\e[0m to inform server about LOG_OFF before exiting");
+        else if(response == 0)
+                fprintf(stdout, "dbclient: got \e[31;1mERROR_IP_PORT_NOT_FOUND_IN_LIST\e[0m from server on exit\n");
         close(lastSocket);
     }
-    else
-        close(lastSocket);
+
     free_rsrc(EXIT_SUCCESS);
 }
 
