@@ -7,7 +7,7 @@
 // replace and put result in dst, e.g src = d0/d1/d2 --> dst = d0/d1/new
 int setPath(char* dst, const char* src, const char* new){
     int index;
-    if(src == NULL || dst == NULL)
+    if(src == NULL || dst == NULL || new == NULL)
         return -1;
 
     // all path until a leaf in dst is same as source
@@ -25,7 +25,7 @@ int lastIndexOf(char c, const char* str){
     if(str == NULL)
         return -1;
 
-    for(i = strlen(str)-1; i >= 0; i--){
+    for(i = strlen(str)-2; i >= 0; i--){
         if(str[i] == c)
             return i;
     }

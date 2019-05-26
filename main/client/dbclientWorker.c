@@ -37,20 +37,20 @@ void* dbclientWorker(void* arg){
         // establish a connection with peer
         infoToAddr(&(task.owner), &peer);
         if((sock = connectTo(&peer)) < 0){
-            perror("dbclient: working thread failed to establish connection with peer");
+            perror("dbclient: working thread \e[31;1mfailed\e[0m to establish connection with peer");
             continue;
         }
 
         // make a GET_FILE or GET_FILE_LIST request 
         if(write(sock, codeBuffer[task.version == -1], FILE_CODE_LEN) != FILE_CODE_LEN){
-            perror("dbclient: working thread failed to issue request");
+            perror("dbclient: working thread \e[31;1mfailed\e[0m to issue request");
             continue;
         }
 
         // send your id
         addrToInfo(&address, &info);
         if(sendClientInfo(sock, &info) < 0){
-            perror("dbclient: working thread failed to send (ip, port) pair");
+            perror("dbclient: working thread \e[31;1mfailed\e[0m to send (ip, port) pair");
             continue;
         }
 
@@ -60,7 +60,7 @@ void* dbclientWorker(void* arg){
         else
             rv = getFile(sock, rsrc, &task);
         if(rv < 0)
-            perror("dbclient: working thread failed to complete task");
+            perror("dbclient: working thread \e[31;1mfailed\e[0m to complete task");
         close(sock);
     }
     pthread_exit(NULL);
@@ -72,9 +72,6 @@ int getFileList(int socket, struct clientResources* rsrc, struct fileInfo* task)
     if(rsrc == NULL || task == NULL)
         return -1;
 
-
-    printf("GET_FILE_LIST");//@@@@@@@@@@@
-    
     //  receive (path_length, actual_path, version) file pairs until length 0 is encountered
     while(1){
 
@@ -148,9 +145,7 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
 
         // create or truncate file copy of this system, make parent directories as needed
         if((localFile = open(localPath, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS)) < 0){
-            printf("%s\n", localPath);//@@
             free(localPath);
-            perror("open");//@@
             return -10;
         }
 

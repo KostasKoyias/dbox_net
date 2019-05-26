@@ -69,6 +69,8 @@ then
 fi
 $exe -p $port &
 echo dbserver running at linux01.di.uoa.gr on port $port with pid: $! # display pid of the server
+
+# let server operate for 5 minutes
 sleep 300
 kill -INT $!
 wait $!

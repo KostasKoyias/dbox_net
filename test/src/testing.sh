@@ -32,7 +32,7 @@ sleep 30
 
 ### run a client process for each user in a different machine at linux workstations of di.uoa.gr
 secs_of_operation=$(($users*15))
-echo "testing.sh: running $users clients... for $secs_of_operation seconds each"
+echo "testing.sh: running $users clients for $secs_of_operation seconds each..."
 declare -a pids
 for ((i = 1;i <= $users; i++))
 do
@@ -43,7 +43,6 @@ done
 ### wait for all clients to terminate
 for i in ${pids[@]}
 do
-    kill -INT $i
     wait $i
 done
 echo -e "testing.sh: all processes terminated\ntesting.sh: exiting now..."
