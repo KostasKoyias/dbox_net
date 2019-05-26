@@ -2,6 +2,7 @@
 #define utils_H_
 #include "define.h"
 #include "clientInfo.h"
+#include "list.h"
 
 // generic utility methods
 void perror_exit(char*);
@@ -26,6 +27,8 @@ int makeParents(char*, mode_t);
 int mkdirTree(char*, mode_t);
 int statFile(char*);
 int digits(int);
-
+int socketSetInit(int, struct G_list *, fd_set *);
+int getActiveSocket(struct G_list *, fd_set *);
+int getMaxFd(int, struct G_list*);
 
 #endif

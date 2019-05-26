@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -g3 -Wall
 LFLAGS = -lpthread -lrt
-SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c utils/utils.c
-RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o utils.o
+SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c utils/utils.c utils/fd.c
+RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o utils.o fd.o
 SERVER = dbserverOperations.o 
 CLIENT = dbclientOperations.o dbclientRequests.o dbclientInit.o dbclientWorker.o
 SERVER_SRCS = server/dbserver.c server/dbserverOperations.c
@@ -37,12 +37,14 @@ clientInfo.o: utils/clientInfo.c
 circularBuffer.o: utils/circularBuffer.c
 	$(CC) $(CFLAGS) -c utils/circularBuffer.c $(LFLAGS)
 
+fd.o: utils/fd.c
+	$(CC) $(CFLAGS) -c utils/fd.c $(LFLAGS)
+
 # server
 dbserverOperations.o: server/dbserverOperations.c
 	$(CC) $(CFLAGS) -c server/dbserverOperations.c $(LFLAGS)
 
 # client
-
 # 		main thread
 dbclientOperations.o: client/dbclientOperations.c
 	$(CC) $(CFLAGS) -c client/dbclientOperations.c $(LFLAGS)
@@ -50,6 +52,7 @@ dbclientRequests.o: client/dbclientRequests.c
 	$(CC) $(CFLAGS) -c client/dbclientRequests.c $(LFLAGS)
 dbclientInit.o: client/dbclientInit.c
 	$(CC) $(CFLAGS) -c client/dbclientInit.c $(LFLAGS)
+
 #		worker thread
 dbclientWorker.o: client/dbclientWorker.c
 	$(CC) $(CFLAGS) -c client/dbclientWorker.c $(LFLAGS)

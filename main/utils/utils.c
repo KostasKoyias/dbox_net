@@ -102,3 +102,43 @@ int digits(int number){
     return digits;
 }
 
+// turn a linked list of integers into a socket set
+int socketSetInit(int listeningSocket, struct G_list *vector, fd_set *set){
+    struct G_node *i;
+    if(vector == NULL || set == NULL)
+        return -1;
+
+    // clear set, then add the listening socket and all socket descriptors of vector into the socket set
+    FD_ZERO(set);
+    FD_SET(listeningSocket, set);
+    for(i = vector->head ; i != NULL; i = i->next)
+        FD_SET(*((int*)i->data), set);
+    return 0;
+}
+
+// find out which socket forced select to return
+int getActiveSocket(struct G_list *vector, fd_set *set){
+    struct G_node *i;
+    int fd;
+    if(vector == NULL || set== NULL)
+        return -1;
+    
+    for(i = vector->head ; i != NULL; i = i->next){
+        fd = *((int*)i->data);
+        if(FD_ISSET(fd, set))
+            return fd;
+    }
+    return -2;
+}
+
+// given a file descriptor of a listening socket and a list of fds, return the one with having the maximum value 
+int getMaxFd(int listeningSocket, struct G_list* list){
+    struct G_node* i;
+    int max = listeningSocket;
+    if(list == NULL)
+        return listeningSocket;
+
+    for(i = list->head; i != NULL; i = i->next)
+        max = MAX(listeningSocket, *((int *)i->data));
+    return max;
+}

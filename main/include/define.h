@@ -17,6 +17,7 @@
 #include <netdb.h>       //gethost*
 #include <time.h>        //timespec,time_t
 #include <sys/types.h>
+#include <sys/time.h>
 #include <pthread.h>     //threads, mutexes
 #include <dirent.h>     //readdir
  #include <inttypes.h>
@@ -29,6 +30,7 @@
 #define FILE_CODE_LEN 20    // requests on main thread of dbclient
 #define BACK_LOG 5
 #define SOCKET_CAPACITY 1024
+#define MAX(a,b) ((a) > (b)) ? (a) : (b)
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #define FILE_PERMS 0644
 #define DIR_PERMS 0755
