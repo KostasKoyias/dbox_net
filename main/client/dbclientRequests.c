@@ -80,7 +80,7 @@ int handleGetFileList(int socket, char* dirPath){
             // first let peer know about the path size, that many bytes will later on be read, omit too long paths, circularBuffer.path is fixed
             relativePath = fullPath + inputlen + 1; // send a path relative to your input directory
             pathSize = strlen(relativePath);
-            printf("SEND %s\n", relativePath);//@@@@@@@@@@@
+            printf("SEND %s\n", relativePath);//@
 
             if(pathSize >= PATH_SIZE-1 || write(socket, &pathSize, sizeof(int)) != sizeof(int) || (write(socket, relativePath, pathSize) != pathSize)){
                 closedir(dirPointer);
@@ -113,7 +113,7 @@ int handleGetFileList(int socket, char* dirPath){
 
 // respond to a "GET_FILE" request by getting the exact path and sending all bytes of the file under that path
 int handleGetFile(int socket, char* directoryPath){
-    char fullPath[PATH_SIZE], relativePath[PATH_SIZE], responseCode[FILE_CODE_LEN], buffer[SOCKET_CAPACITY];
+    char fullPath[PATH_SIZE], relativePath[PATH_SIZE], responseCode[FILE_CODE_LEN] = "\0", buffer[SOCKET_CAPACITY];
     struct stat statBuffer;
     int version, fd, bytes, pathSize;
     if(directoryPath == NULL)
@@ -129,8 +129,6 @@ int handleGetFile(int socket, char* directoryPath){
 
     // get version of file, return FILE_NOT_FOUND if it does not exists
     if(stat(fullPath, &statBuffer) == -1){
-        printf("%s not found\n", fullPath); //@@
-        perror("error:"); //@@
         strcpy(responseCode, "FILE_NOT_FOUND");
         if(write(socket, responseCode, FILE_CODE_LEN) != FILE_CODE_LEN)
             return -3;

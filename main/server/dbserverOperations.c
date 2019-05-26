@@ -48,7 +48,7 @@ int sendClients(int socket, struct G_list* list){
 // insert a new client or remove an existing one from the client list, based on a request code
 int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     struct clientInfo info;
-    uint8_t response[2] = {0, 1};
+    uint8_t response[3] = {-1, 0, 1};
     if(list == NULL || socket < 0)
         return -1;
 
@@ -58,8 +58,15 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
 
     // if a client logged in, add client to the client list and send USER ON to all other clients
     if(operationCode == CLIENT_INSERT){
-        if(listInsert(list, &info) < 0)
-            return -3;
+
+        // if client exists, respond with code -1 indicating ERROR_IP_PORT_EXISTS, else send list of connected clients to the new one
+        if(listInsert(list, &info) < 0){
+            if(write(socket, &(response[0]), sizeof(response[0])) != sizeof(response[0]))
+                return -3;
+            return 1;
+        }
+        if(sendClients(socket, list) < 0)
+            return -4;
         return informOtherClients(USER_ON, &info, list);
     }
     // else remove client from the client list, send USER OFF to all other clients
@@ -67,11 +74,11 @@ int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
 
         // if client does not exist, respond with a 0 indicating: "ERROR_IP_PORT_NOT_FOUND_IN_LIST", else respond sending 1
         if(listDelete(list, &info) < 0){
-            if(write(socket, response, sizeof(response[0])) != sizeof(response[0]))
-                return -4;
-            return -5;
+            if(write(socket, &(response[1]), sizeof(response[1])) != sizeof(response[1]))
+                return -5;
+            return 2;
         }
-        if(write(socket, &(response[1]), sizeof(response[1])) != sizeof(response[1]))
+        if(write(socket, &(response[2]), sizeof(response[2])) != sizeof(response[2]))
             return -6;
         return informOtherClients(USER_OFF, &info, list);
     }

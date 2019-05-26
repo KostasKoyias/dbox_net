@@ -68,21 +68,6 @@ int main(int argc, char* argv[]){
         fprintf(stdout, "dbclient: re-logged in dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
     else
         fprintf(stdout, "dbclient: first time at dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
-    
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    // get IP address of this machine
-    if(getMyIp(&(address.sin_addr)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to get IP address of this client");
-
-    // connect to server to issue a log_on request
-    if((generalSocket = connectTo(&server)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at LOG_ON stage");
-
-    // inform server for your arrival issuing a LOG_ON request
-    if(informServer(LOG_ON, generalSocket, &(address)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to inform server on arrival");
-    close(generalSocket);
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ THREADS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -98,12 +83,19 @@ int main(int argc, char* argv[]){
             perror_free("dbclient: \e[31;1mfailed\e[0m to create worker thread");
     }
 
-
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ GET_CLIENTS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // get IP address of this machine
+    if(getMyIp(&(address.sin_addr)) < 0)
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get IP address of this client");
 
     // connect to server to issue a log_on request
     if((generalSocket = connectTo(&server)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at GET_CLIENTS stage"); 
+        perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at LOG_ON stage");
+
+    // inform server for your arrival issuing a LOG_ON request
+    if(informServer(LOG_ON, generalSocket, &(address)) < 0)
+        perror_free("dbclient: \e[31;1mfailed\e[0m to inform server on arrival");
 
     if(getClients(generalSocket, &(address), &rsrc) < 0)
         perror_free("dbclient: \e[31;1mfailed\e[0m to get dbox client list from server");
