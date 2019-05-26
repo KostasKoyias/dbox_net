@@ -19,13 +19,13 @@ int addrToInfo(struct sockaddr_in*, struct clientInfo*);
 int infoToAddr(struct clientInfo*, struct sockaddr_in*);
 int getIpOf(char*, struct in_addr*);
 
-
 // other
 int setPath(char*, const char*, const char*);
 int lastIndexOf(char, const char*);
 int makeParents(char*, mode_t);
 int mkdirTree(char*, mode_t);
 int statFile(char*);
+int digits(int);
 
 
 #endif

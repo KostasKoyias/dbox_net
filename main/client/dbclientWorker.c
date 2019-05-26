@@ -109,11 +109,11 @@ int getFile(int socket, struct clientResources* rsrc, struct fileInfo* task){
     // get local path to the directory made for the other client under mirror which is of the form "mirrorPath/nameOfClient/pathClientSendYou"
     if((peer = gethostbyaddr(&(task->owner.ipAddress), sizeof(task->owner.ipAddress), AF_INET)) == NULL)
         return -2;
-    if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + 3)) < 0)
+    if((localPath = malloc(strlen(mirror) + strlen(peer->h_name) + strlen(task->path) + digits(task->owner.portNumber) + 4)) < 0)
         return -3;
 
     // make parent directories as needed
-    sprintf(localPath, "%s/%s/%s", mirror, peer->h_name, task->path);
+    sprintf(localPath, "%s/%s_%d/%s", mirror, peer->h_name, task->owner.portNumber, task->path);
     if((result = makeParents(localPath, DIR_PERMS)) < 0 && result != EEXIST){
         free(localPath); return -4;}
 

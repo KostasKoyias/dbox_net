@@ -91,3 +91,14 @@ int statFile(char* path){
     else 
         return (int)statBuffer.st_mtime;
 }
+
+// given an integer, return the number of digits it has
+int digits(int number){
+    int digits = 0;
+    while(number != 0){
+        number /= 10;
+        digits++;
+    }
+    return digits;
+}
+
