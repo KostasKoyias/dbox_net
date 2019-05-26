@@ -6,7 +6,6 @@ int handleRequest(char* path, char* requestCode, int socket, struct clientResour
     if(path == NULL || requestCode == NULL || rsrc == NULL)
         return -1;
 
-
     // if this is a message from the server specifying a new user, make sure to get all new files
     if(strcmp(requestCode, "USER_ON") == 0){
         clientAssign(&(fileInfo.owner), peer);

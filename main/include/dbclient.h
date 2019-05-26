@@ -5,7 +5,6 @@
 #include "clientInfo.h"
 #include "utils.h"
 #include "circularBuffer.h"
-#include "fd.h"
 
 #define LOG_ON 0
 #define LOG_OFF 1
