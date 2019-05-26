@@ -4,18 +4,16 @@
 // in case of an interrupt signal, dbclient shall exit safely through the handler, therefore variables used there are declared globally
 pthread_t* threadVector;
 int listeningSocket, workerThreads = 0;
-struct G_list socketVector = {NULL, sizeof(int), 0, fdCompare, fdAssign, NULL, NULL, NULL};
 struct clientResources rsrc = {.list = {NULL, sizeof(struct clientInfo), 0, clientCompare, clientAssign, clientPrint, NULL, NULL}};
 struct sockaddr_in address = {.sin_family = AF_INET}, server = {.sin_addr.s_addr = 0, .sin_family = AF_INET, .sin_port = 0};
 uint8_t powerOn = 1;
 char* mirror;
 
 int main(int argc, char* argv[]){
-    int i, dirName = 0, generalSocket = 0, bufferSize = 0, activeSocket;
+    int i, dirName = 0, generalSocket = 0, bufferSize = 0;
     char requestCode[FILE_CODE_LEN];
     struct clientInfo peerInfo;
     struct stat statBuffer;
-    fd_set socketSet;
 
     signal(SIGINT, handler); // in case of a ^C signal
 
@@ -71,7 +69,7 @@ int main(int argc, char* argv[]){
     else
         fprintf(stdout, "dbclient: first time at dbox, input directory under %s and mirror under %s\n", argv[dirName], mirror);
 
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ PREPARE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ PREPARE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // initialize circularBuffer, mutexes and conditions
     rsrcInit(&rsrc, bufferSize);
@@ -84,12 +82,8 @@ int main(int argc, char* argv[]){
         if(pthread_create(threadVector+i, NULL, dbclientWorker, &rsrc))
             perror_free("dbclient: \e[31;1mfailed\e[0m to create worker thread");
     }
-
-    // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to get a listening socket");
     
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ LOG_ON @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     // get IP address of this machine
     if(getMyIp(&(address.sin_addr)) < 0)
         perror_free("dbclient: \e[31;1mfailed\e[0m to get IP address of this client");
@@ -108,70 +102,42 @@ int main(int argc, char* argv[]){
     bufferPrint(&(rsrc.buffer));
     listPrint(&(rsrc.list));
 
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // create a listening socket, bind it to an address and mark it as a passive one 
+    if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get a listening socket");
     // accept connections until an interrupt signal is caught
     while(1){
         fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", address.sin_port, htons(address.sin_port));
 
-        // initialize socket set, by adding the listening and all active sockets to it
-        if(socketSetInit(listeningSocket, &socketVector, &socketSet) < 0){
-            perror("dbclient: \e[31;1mfailed\e[0m to initialize socket set");
+        // accept TCP connection
+        if((generalSocket = accept(listeningSocket, NULL, NULL)) == -1){
+            perror("dbclient: accepting connection \e[31;1mfailed\e[0m");
             continue;
         }
 
-        // select a socket ready to read from
-        if((activeSocket = select(getMaxFd(listeningSocket, &socketVector) + 1, &socketSet, NULL, NULL, NULL)) == -1){
-            perror("dbclient: select call \e[31;1mfailed\e[0m");
+        // get code of request 
+        else if(read(generalSocket, requestCode, FILE_CODE_LEN) != FILE_CODE_LEN){
+            perror("dbclient: \e[31;1mfailed\e[0m to get request from client");
+            continue;
+        }
+        requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
+        fprintf(stdout, "dbclient: received \e[1;93m'%s'\e[0m request\n", requestCode);
+
+        // each request is followed by an (ip, port) pair
+        if(getClientInfo(generalSocket, &peerInfo) < 0){
+            perror("dbclient: \e[31;1mfailed\e[0m to get id from client");
             continue;
         }
 
-        // if listening socket is the one ready
-        if(FD_ISSET(listeningSocket, &socketSet)){
+        // resolve request
+        if(handleRequest(argv[dirName], requestCode, generalSocket, &rsrc, &peerInfo) < 0)
+                perror("dbclient: \e[31;1mfailed\e[0m to handle request");
+        else
+            fprintf(stdout, "dbclient: \e[32;1msuccess\e[0m");
 
-            // accept TCP connection
-            if((generalSocket = accept(listeningSocket, NULL, NULL)) == -1){
-                perror("dbclient: accepting connection \e[31;1mfailed\e[0m");
-                continue;
-            }
-
-            // add the new socket to the active sockets vector to be monitored on a subsequent I/O
-            if(listInsert(&socketVector, &generalSocket) < 0)
-                perror("dbclient: \e[31;1mfailed\e[0m to add new socket descriptor into the socket set to be monitored");
-        }
-        // else the one ready, is meant to handle a request
-        else{
-
-            // find out which socket is ready to read from without blocking
-            if((generalSocket = getActiveSocket(&socketVector, &socketSet)) < 0){
-                perror("dbclient: \e[31;1mfailed\e[0m to locate active socket for a client or server request");
-                continue;
-            }
-
-            // get code of request 
-            else if(read(generalSocket, requestCode, FILE_CODE_LEN) != FILE_CODE_LEN){
-                perror("dbclient: \e[31;1mfailed\e[0m to get request from client");
-                continue;
-            }
-            requestCode[FILE_CODE_LEN-1] = '\0'; // ensure request string is terminated
-            fprintf(stdout, "dbclient: received \e[1;93m'%s'\e[0m request\n", requestCode);
-
-            // each request is followed by an (ip, port) pair
-            if(getClientInfo(generalSocket, &peerInfo) < 0){
-                perror("dbclient: \e[31;1mfailed\e[0m to get id from client");
-                continue;
-            }
-
-            // resolve request
-            if(handleRequest(argv[dirName], requestCode, generalSocket, &rsrc, &peerInfo) < 0)
-                    perror("dbclient: \e[31;1mfailed\e[0m to handle request");
-            else
-                fprintf(stdout, "dbclient: \e[32;1msuccess\e[0m");
-
-            // close response socket, not to run out of file descriptors
-            listDelete(&socketVector, &generalSocket);
-            close(generalSocket);
-        }
+        // close response socket, not to run out of file descriptors
+        close(generalSocket);
     }
     getchar();
     handler(0);
@@ -217,7 +183,6 @@ void free_rsrc(int exitCode){
     rsrcFree(&rsrc);
     free(threadVector);   
     free(mirror);
-    listFree(&socketVector);
     exit(exitCode);
 }
 
