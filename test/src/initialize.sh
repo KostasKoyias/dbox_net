@@ -2,7 +2,7 @@
 ####################################################################################################
 # this script: compiles source code, prepares input files and runs the server on linux01.di.uoa.gr #
 # 1st argument = #_of_users, 2nd = application_name under user directory(the 1st match is used)    #
-# make sure to store create_infiles.sh somewhere under your application directory                  #
+# make sure to store create_infiles.sh and names.sh somewhere under your application directory     #
 ####################################################################################################
 
 max_users=8

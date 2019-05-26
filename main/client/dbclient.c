@@ -44,7 +44,7 @@ int main(int argc, char* argv[]){
 
         // convert server's IP address from a string in dotted format to binary
         else if(strcmp(argv[i], "-sip") == 0){
-            if(inet_aton(argv[i+1], &server.sin_addr) < 0)
+            if(getIpOf(argv[i+1], &server.sin_addr) < 0)
                 perror_free("dbclient: server ip not in presentation format");
         }
         else

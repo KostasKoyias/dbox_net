@@ -17,6 +17,7 @@ int getMyIp(struct in_addr*);
 int getReuseAddrSocket();
 int addrToInfo(struct sockaddr_in*, struct clientInfo*);
 int infoToAddr(struct clientInfo*, struct sockaddr_in*);
+int getIpOf(char*, struct in_addr*);
 
 
 // other

@@ -67,6 +67,20 @@ int bindOnPort(int fd, uint16_t portNumber){
     return bind(fd, (struct sockaddr*)&addr, sizeof(addr));
 }
 
+// convert from hostname or number-and-dots notation into binary form in network byte order
+int getIpOf(char* hostname, struct in_addr* address){
+    struct hostent *hostInfo;
+
+    if(hostname == NULL || address == NULL)
+        return -1;
+    if((hostInfo = gethostbyname(hostname)) == NULL){
+        if(inet_aton(hostname, address) < 0)
+            return -2;
+    }else
+        *address = (*(struct in_addr*)(hostInfo->h_addr_list[0]));
+    return 0;
+}
+
 // return address of this machine into binary form in network byte order
 int getMyIp(struct in_addr* address){
     char hostname[HOST_SIZE];
@@ -79,17 +93,6 @@ int getMyIp(struct in_addr* address){
         return -2;
     *address =  (*(struct in_addr*)hostInfo->h_addr_list[0]);
     return 0;
-}
-
-// check whether a file exists on this file system and return the lastest version id
-int statFile(char* path){
-    struct stat statBuffer;
-
-    // get status of file, return FILE_NOT_FOUND in case of failure
-    if(stat(path, &statBuffer) == -1)
-        return -1;
-    else 
-        return (int)statBuffer.st_mtime;
 }
 
 // convert sockaddr_in to clientInfo
