@@ -169,7 +169,7 @@ void handler(int sig){
             perror("dbclient: \e[31;1mfailed\e[0m to inform server about LOG_OFF before exiting");
         else if(read(lastSocket, &response, sizeof(response)) != sizeof(response))
             perror("dbclient: \e[31;1mfailed\e[0m to inform server about LOG_OFF before exiting");
-        else if(response == 0)
+        else if(response == ERROR_IP_PORT_NOT_FOUND_IN_LIST)
                 fprintf(stdout, "dbclient: got \e[31;1mERROR_IP_PORT_NOT_FOUND_IN_LIST\e[0m from server on exit\n");
         close(lastSocket);
     }

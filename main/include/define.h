@@ -34,4 +34,7 @@
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #define FILE_PERMS 0644
 #define DIR_PERMS 0755
+#define EXIT_APPROVED 1
+#define ERROR_IP_PORT_NOT_FOUND_IN_LIST 0
+#define ERROR_IP_PORT_EXISTS -1
 #endif

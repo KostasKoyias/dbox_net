@@ -48,7 +48,7 @@ int sendClients(int socket, struct G_list* list){
 // insert a new client or remove an existing one from the client list, based on a request code
 int clientsUpdate(uint8_t operationCode, int socket, struct G_list* list){
     struct clientInfo info;
-    uint8_t response[3] = {-1, 0, 1};
+    uint8_t response[3] = {ERROR_IP_PORT_EXISTS, ERROR_IP_PORT_NOT_FOUND_IN_LIST, EXIT_APPROVED};
     if(list == NULL || socket < 0)
         return -1;
 

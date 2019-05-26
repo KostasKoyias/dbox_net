@@ -35,6 +35,10 @@ int getClients(int socket, struct sockaddr_in* myAddress, struct clientResources
     if(read(socket, &len, sizeof(int)) != sizeof(int))
         return -2;
 
+    // if client already exists, abort
+    if(len == ERROR_IP_PORT_EXISTS)
+        return -3;
+
     // for each list member
     for(i = 0; i < len; i++){
         if(read(socket, &(fileInfo.owner.ipAddress), sizeof(uint32_t)) == -1 || read(socket, &(fileInfo.owner.portNumber), sizeof(uint16_t)) == -1)

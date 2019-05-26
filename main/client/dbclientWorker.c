@@ -59,6 +59,8 @@ void* dbclientWorker(void* arg){
             rv = getFileList(sock, rsrc, &task);
         else
             rv = getFile(sock, rsrc, &task);
+
+        // if thread failed to complete the corresponding task for whatever reason, push task back in te buffer until some thread completes it
         if(rv < 0)
             perror("dbclient: working thread \e[31;1mfailed\e[0m to complete task");
         close(sock);

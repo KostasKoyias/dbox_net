@@ -45,4 +45,9 @@ for i in ${pids[@]}
 do
     wait $i
 done
-echo -e "testing.sh: all processes terminated\ntesting.sh: exiting now..."
+echo -e "testing.sh: all processes terminated\n"
+
+### validate results
+ssh sdi$id@linux01.di.uoa.gr 'bash -s' < validate.sh $users
+echo "testing.sh: exiting now..."
+
