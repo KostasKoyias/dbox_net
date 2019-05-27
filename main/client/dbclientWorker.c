@@ -34,28 +34,23 @@ void* dbclientWorker(void* arg){
         if(confirmClient(&(task.owner), rsrc) != 1)    
             continue;
 
+        // try and fulfill task
+        rv = -1;
+
         // establish a connection with peer
-        infoToAddr(&(task.owner), &peer);
-        if((sock = connectTo(&peer)) < 0){
+        if(infoToAddr(&(task.owner), &peer) < 0 || (sock = connectTo(&peer)) < 0)
             perror("dbclient: working thread \e[31;1mfailed\e[0m to establish connection with peer");
-            continue;
-        }
 
         // make a GET_FILE or GET_FILE_LIST request 
-        if(write(sock, codeBuffer[task.version == -1], FILE_CODE_LEN) != FILE_CODE_LEN){
+        else if(write(sock, codeBuffer[task.version == -1], FILE_CODE_LEN) != FILE_CODE_LEN)
             perror("dbclient: working thread \e[31;1mfailed\e[0m to issue request");
-            continue;
-        }
 
         // send your id
-        addrToInfo(&address, &info);
-        if(sendClientInfo(sock, &info) < 0){
+        else if(addrToInfo(&address, &info) < 0 || sendClientInfo(sock, &info) < 0)
             perror("dbclient: working thread \e[31;1mfailed\e[0m to send (ip, port) pair");
-            continue;
-        }
 
         // if task is about syncing with a new user, i.e GET_FILE_LIST then version is set to -1, else it is about getting a certain file version from another client
-        if(task.version == -1)
+        else if(task.version == -1)
             rv = getFileList(sock, rsrc, &task);
         else
             rv = getFile(sock, rsrc, &task);
