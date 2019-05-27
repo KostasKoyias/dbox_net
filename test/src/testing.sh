@@ -8,9 +8,9 @@
 ##############################################################################################################################################
 
 max_users=8        # change to your preference
-id=${1-1500071}
-app_name=${2-dbox_net}
-users=${3-5}
+id=$1
+app_name=$2
+users=$3
 ### make sure the right number of arguments is passed
 if [ $# -ne 2 ] && [ $# -ne 3 ] 
 then

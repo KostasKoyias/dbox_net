@@ -34,7 +34,7 @@ then
     exit 3
 fi
 input=$input/input
-$exe -w 5 -b 15 -sip $server_machine -sp $sp_port -p $cl_port -d $input &
+$exe -w 5 -b 40 -sip $server_machine -sp $sp_port -p $cl_port -d $input &
 echo "client.sh: started client0$id, process $! at linux0$id.di.uoa.gr on port $cl_port"
 sleep $secs_of_operation
 kill -INT $!

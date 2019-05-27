@@ -88,6 +88,10 @@ int main(int argc, char* argv[]){
     if(getMyIp(&(address.sin_addr)) < 0)
         perror_free("dbclient: \e[31;1mfailed\e[0m to get IP address of this client");
 
+    // create a listening socket, bind it to an address and mark it as a passive one 
+    if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
+        perror_free("dbclient: \e[31;1mfailed\e[0m to get a listening socket");
+
     // connect to server to issue a log_on request
     if((generalSocket = connectTo(&server)) < 0)
         perror_free("dbclient: \e[31;1mfailed\e[0m to establish connection at LOG_ON stage");
@@ -103,9 +107,6 @@ int main(int argc, char* argv[]){
     listPrint(&(rsrc.list));
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ SERVE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    // create a listening socket, bind it to an address and mark it as a passive one 
-    if((listeningSocket = getListeningSocket(address.sin_addr.s_addr, address.sin_port)) < 0)
-        perror_free("dbclient: \e[31;1mfailed\e[0m to get a listening socket");
     // accept connections until an interrupt signal is caught
     while(1){
         fprintf(stdout, "\ndbclient: handling requests on port %hu(h)/%hu(n)\n", address.sin_port, htons(address.sin_port));
