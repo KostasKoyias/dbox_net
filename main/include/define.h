@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-//#include <fcntl.h>     //low-level I/O syscalls
+#include <fcntl.h>     //low-level I/O syscalls
 #include <stdarg.h>      //variable argument lists 
 #include <stdint.h>
 #include <sys/file.h>    //flock
@@ -18,11 +18,10 @@
 #include <time.h>        //timespec,time_t
 #include <sys/types.h>
 #include <sys/time.h>
-#include <pthread.h>     //threads, mutexes
+#include <pthread.h>    //threads, mutexes
 #include <dirent.h>     //readdir
- #include <inttypes.h>
-//#include <sys/wait.h>
-#include <errno.h>
+#include <inttypes.h>   //uint types
+#include <errno.h>      //perror
 
 #define HOST_SIZE 256
 #define PATH_SIZE 512
