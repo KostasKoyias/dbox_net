@@ -12,11 +12,11 @@ OBJS = $(RSRC) $(SERVER) $(CLIENT)
 all: dbserver dbclient $(OBJS) 
 
 # applications
-dbserver: server/dbserver.c $(SERVER_SRCS) $(SOURCES)
-	$(CC) $(CFLAGS) -o dbserver $(SERVER_SRCS) $(SOURCES) $(LFLAGS)
+dbserver: $(SERVER_SRCS) $(SOURCES)
+	$(CC) $(CFLAGS) -o $@ $? $(LFLAGS)
 
-dbclient: client/dbclient.c $(CLIENT_SRCS) $(SOURCES)
-	$(CC) $(CFLAGS) -o dbclient $(CLIENT_SRCS) $(SOURCES) $(LFLAGS)
+dbclient: $(CLIENT_SRCS) $(SOURCES)
+	$(CC) $(CFLAGS) -o $@ $? $(LFLAGS)
 
 # utilities and data structures	
 msgUtils.o: utils/msgUtils.c 
