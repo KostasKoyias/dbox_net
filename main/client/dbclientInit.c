@@ -23,13 +23,8 @@ int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){
 
 // get client list from server
 int getClients(int socket, struct sockaddr_in* myAddress, struct clientResources* rsrc){
-    char requestCode[CODE_LEN] = "GET_CLIENTS";
     struct fileInfo fileInfo = {.path = "\0", .version = -1}; //version -1 indicates that this is a GET_FILE_LIST task
     int i, len;
-
-    // ask for the list
-    if(write(socket, requestCode, CODE_LEN) != CODE_LEN)
-        return -1;
 
     // get size of list
     if(read(socket, &len, sizeof(int)) != sizeof(int))

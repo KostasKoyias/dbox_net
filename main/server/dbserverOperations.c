@@ -10,10 +10,6 @@ int handleRequest(char* requestCode, int responseSocket, struct G_list* clientli
         if(strcmp(requestCode, "LOG_ON") == 0)
             return clientsUpdate(CLIENT_INSERT, responseSocket, clientlist);
 
-        // else if a client just asked for the client list, send it right away based on the protocol 
-        else if(strcmp(requestCode, "GET_CLIENTS") == 0)
-            return sendClients(responseSocket, clientlist);
-
         // else if a client just logged out, remove the client from our client list
         else if(strcmp(requestCode, "LOG_OFF") == 0)
             return clientsUpdate(CLIENT_DELETE, responseSocket, clientlist);
