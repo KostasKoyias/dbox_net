@@ -18,6 +18,10 @@ struct clientResources{
     pthread_cond_t fullBuffer;
     pthread_cond_t emptyBuffer;
     pthread_mutex_t listMutex;
+    uint8_t listWriter;
+    uint8_t listReaders;
+    pthread_cond_t listWCond;
+    pthread_cond_t listRCond;
     struct G_list list;
 };
 
@@ -40,6 +44,7 @@ int getFile(int, struct clientResources*, struct fileInfo*);
 int addClient(struct fileInfo*, struct clientResources*);
 int addTask(struct fileInfo*, struct clientResources*);
 int removeClient(struct clientInfo*, struct clientResources*);
+int accessClientList(struct clientInfo*, struct clientResources*, uint8_t);
 int rsrcInit(struct clientResources*, int);
 int rsrcFree(struct clientResources*);
 int confirmClient(struct clientInfo*, struct clientResources*);

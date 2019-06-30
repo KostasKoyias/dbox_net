@@ -4,8 +4,6 @@
 #include "list.h"
 #include "clientInfo.h"
 
-#define CLIENT_INSERT 0
-#define CLIENT_DELETE 1
 #define USER_ON 0
 #define USER_OFF 1
 

@@ -6,12 +6,8 @@ int addClient(struct fileInfo* fileInfo, struct clientResources* rsrc){
     if(rsrc == NULL)
         return -1;
 
-    // add client to client list
-    pthread_mutex_lock(&(rsrc->listMutex));
-    listInsert(&(rsrc->list), &(fileInfo->owner));
-    listPrint(&(rsrc->list));
-    pthread_mutex_unlock(&(rsrc->listMutex));
-    return addTask(fileInfo, rsrc);
+    // add client to client list as well as a task for syncing with that client in the buffer
+    return accessClientList(&(fileInfo->owner), rsrc, CLIENT_INSERT) || addTask(fileInfo, rsrc);
 }
 
 // add a task to the circularBuffer for a worker thread to complete
@@ -31,17 +27,35 @@ int addTask(struct fileInfo* fileInfo, struct clientResources* rsrc){
     return 0;
 }
 
-
 // handle a "USER_OFF" send by server
-int removeClient(struct clientInfo* clientInfo,struct clientResources* rsrc){
+int removeClient(struct clientInfo* clientInfo, struct clientResources* rsrc){
     if(rsrc == NULL)
         return -1;
+    return accessClientList(clientInfo, rsrc, CLIENT_DELETE);
+}
 
-    // remove client from client list
+int accessClientList(struct clientInfo* clientInfo, struct clientResources* rsrc, uint8_t code){
+    if(rsrc == NULL)
+        return -1;
+    // wait until no other thread is reading from or writing to the client list, then activate writers' flag
     pthread_mutex_lock(&(rsrc->listMutex));
-    listDelete(&(rsrc->list), clientInfo);
-    listPrint(&(rsrc->list));
+    while(rsrc->listWriter == 1 || rsrc->listReaders > 0)
+        pthread_cond_wait(&(rsrc->listWCond), &(rsrc->listMutex));
+    rsrc->listWriter = 1;
     pthread_mutex_unlock(&(rsrc->listMutex));
+
+    // write in the list and display
+    code == CLIENT_DELETE ? listDelete(&(rsrc->list), clientInfo) : listInsert(&(rsrc->list), clientInfo); 
+    listPrint(&(rsrc->list));
+
+    // on exit, de-activate writer's flag and wake up a single writer and all readers sleeping
+    pthread_mutex_lock(&(rsrc->listMutex));
+    rsrc->listWriter = 0;
+    pthread_cond_signal(&(rsrc->listWCond));
+    pthread_cond_broadcast(&(rsrc->listRCond));
+    pthread_mutex_unlock(&(rsrc->listMutex));
+
+
     return 0;
 }
 
@@ -57,6 +71,9 @@ int rsrcInit(struct clientResources* rsrc, int bufferSize){
     pthread_mutex_init(&(rsrc->listMutex), NULL);
     pthread_cond_init(&(rsrc->fullBuffer), NULL);
     pthread_cond_init(&(rsrc->emptyBuffer), NULL);
+    pthread_cond_init(&(rsrc->listRCond), NULL);
+    pthread_cond_init(&(rsrc->listWCond), NULL);
+    rsrc->listWriter = rsrc->listReaders = 0;
     return 0;
 }
 
@@ -68,7 +85,9 @@ int rsrcFree(struct clientResources* rsrc){
     // buffer resources
     pthread_mutex_destroy(&(rsrc->bufferMutex));
     pthread_cond_destroy(&(rsrc->fullBuffer));
-    pthread_cond_destroy(&(rsrc->emptyBuffer));   
+    pthread_cond_destroy(&(rsrc->emptyBuffer)); 
+    pthread_cond_destroy(&(rsrc->listRCond));  
+    pthread_cond_destroy(&(rsrc->listWCond));  
     bufferFree(&(rsrc->buffer));
 
     // client list resources
@@ -83,10 +102,21 @@ int confirmClient(struct clientInfo* peerInfo, struct clientResources* rsrc){
     if(peerInfo == NULL || rsrc == NULL)
         return -1;
 
-    // lock common resource "client list" and search in it for the (IP, port) pair of this client
+    // lock common resource "client list" and increment readers' counter before entering the critical section
     pthread_mutex_lock(&(rsrc->listMutex));
+    while(rsrc->listWriter == 1)
+        pthread_cond_wait(&(rsrc->listRCond), &(rsrc->listMutex));
+    rsrc->listReaders++;
+    pthread_mutex_unlock(&(rsrc->listMutex));  
+
+    // search for the (IP, port) pair of this client in the list
     result = listSearch(&(rsrc->list), peerInfo);
-    pthread_mutex_unlock(&(rsrc->listMutex));
+
+    // decrement readers' counter signal a writer in case this is the last reader in the cs
+    pthread_mutex_lock(&(rsrc->listMutex));
+    if(--(rsrc->listReaders) == 0)
+        pthread_cond_signal(&(rsrc->listWCond));
+    pthread_mutex_unlock(&(rsrc->listMutex));  
     return (result == NULL ? 0 : 1);
 }
 

@@ -23,6 +23,8 @@
 #include <inttypes.h>   //uint types
 #include <errno.h>      //perror
 
+#define CLIENT_INSERT 0
+#define CLIENT_DELETE 1
 #define HOST_SIZE 256
 #define PATH_SIZE 512
 #define CODE_LEN 15         // requests on dbserver
