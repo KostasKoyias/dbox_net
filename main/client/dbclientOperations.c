@@ -1,5 +1,5 @@
-#include "../include/dbclient.h"
-#include "../include/clientInfo.h"
+#include "dbclient.h"
+#include "clientInfo.h"
 
 // add a client to the list safely
 int addClient(struct fileInfo* fileInfo, struct clientResources* rsrc){

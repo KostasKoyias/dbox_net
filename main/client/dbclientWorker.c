@@ -1,4 +1,4 @@
-#include "../include/dbclient.h"
+#include "dbclient.h"
 
 // client's worker thread, implementing the client side of his, responsible for getting files of other clients 
 void* dbclientWorker(void* arg){

@@ -1,7 +1,7 @@
 /*************************************************************************************************************\
  * The following are some short utility functions on linux networking, grouping together some common commands *
 \*************************************************************************************************************/
-#include "../include/utils.h"
+#include "utils.h"
 
 // create a socket, declaring that the address to be assigned to it, is reusable, bind a name to it if specified
 int getReuseAddressSocket(){

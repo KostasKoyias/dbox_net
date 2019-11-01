@@ -1,4 +1,4 @@
-#include "../include/list.h"
+#include "list.h"
 
 /*  check whether an instance of a certain type belongs to a list, comparing it with the list's elements using a type-specific comparison function
     returns a pointer to the item's position if it exists or NULL if it does not*/

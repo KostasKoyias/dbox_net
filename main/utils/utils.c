@@ -1,7 +1,7 @@
 /*******************************************************************************************\
  * The following are some short utility functions of all kinds, making code re-use simpler *
 \*******************************************************************************************/
-#include "../include/utils.h"
+#include "utils.h"
 
 
 // replace and put result in dst, e.g src = d0/d1/d2 --> dst = d0/d1/new

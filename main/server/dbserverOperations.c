@@ -1,5 +1,5 @@
-#include "../include/dbserver.h"
-#include "../include/utils.h"
+#include "dbserver.h"
+#include "utils.h"
 
 // manage each possible client request
 int handleRequest(char* requestCode, int responseSocket, struct G_list* clientlist){

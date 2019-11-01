@@ -2,7 +2,7 @@
  * The following are some short utility functions, making code re-use simpler                   *
  * most of them handle common error cases and code that is widely used through out this project *
 \***********************************************************************************************/
-#include "../include/utils.h"
+#include "utils.h"
 
 // print error indicated by errno and exit with code 1(FAILURE)
 void perror_exit(char* message){

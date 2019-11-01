@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -g3 -Wall
+BASE = $(shell pwd)
+CFLAGS = -g3 -Wall -I$(BASE)/include
 LFLAGS = -lpthread -lrt
 SOURCES = utils/netUtils.c utils/msgUtils.c utils/list.c utils/circularBuffer.c utils/clientInfo.c utils/utils.c 
 RSRC = list.o clientInfo.o circularBuffer.o msgUtils.o netUtils.o utils.o 

@@ -1,4 +1,4 @@
-#include "../include/circularBuffer.h"
+#include "circularBuffer.h"
 
 // copy all information about a file to another
 int fileAssign(struct fileInfo* fileA, const struct fileInfo* fileB){

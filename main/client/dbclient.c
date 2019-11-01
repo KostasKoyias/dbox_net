@@ -1,4 +1,4 @@
-#include "../include/dbclient.h"
+#include "dbclient.h"
 #define ARGC 13
 
 // in case of an interrupt signal, dbclient shall exit safely through the handler, therefore variables used there are declared globally

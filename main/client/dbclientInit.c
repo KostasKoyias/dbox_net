@@ -1,4 +1,4 @@
-#include "../include/dbclient.h"
+#include "dbclient.h"
 
 // let server know about a new or an outgoing client 
 int informServer(uint8_t code, int socket, struct sockaddr_in* clientAddress){

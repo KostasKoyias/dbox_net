@@ -1,4 +1,4 @@
-#include "../include/clientInfo.h"
+#include "clientInfo.h"
 
 // given two clients, return the address of the 1st one, if identical, else NULL
 void* clientCompare(void* clientA, const void*clientB){

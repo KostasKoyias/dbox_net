@@ -1,4 +1,4 @@
-#include "../include/dbclient.h"
+#include "dbclient.h"
 
 // when a connection is established and a request is made from another client, main thread needs to handle it
 int handleRequest(char* path, char* requestCode, int socket, struct clientResources* rsrc, struct clientInfo* peer){
